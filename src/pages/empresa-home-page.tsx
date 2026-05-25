@@ -1,5 +1,4 @@
 import { NavLink, Outlet } from "react-router-dom"
-import { useState } from "react"
 import {
   ArrowLeftIcon,
   ClipboardTextIcon,
@@ -7,7 +6,7 @@ import {
   UsersIcon,
 } from "@phosphor-icons/react"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   Sidebar,
   SidebarContent,
@@ -22,6 +21,7 @@ import {
   SidebarSeparator,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { useAuth } from "@/contexts/AuthContext"
 
 const empresaSections = [
   {
@@ -44,15 +44,19 @@ const empresaSections = [
   },
 ] as const
 
-export function EmpresaHomePage() {
-  const [empresaData, setEmpresaData] = useState({
-    nome: "Usuário parceiro",
-    email: "contato@ifal.com.br"
-  })
+function getInitials(nome: string) {
+  return (
+    nome
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((parte) => parte[0]?.toUpperCase() ?? "")
+      .join("") || "?"
+  )
+}
 
-  const updateSidebarData = (newData: { nome: string; email: string }) => {
-    setEmpresaData(newData)
-  }
+export function EmpresaHomePage() {
+  const { user, logout } = useAuth()
 
   return (
     <SidebarProvider>
@@ -83,12 +87,10 @@ export function EmpresaHomePage() {
         </SidebarContent>
 
         <SidebarMenuItem className="mb-3">
-          <NavLink to="/login">
-            <SidebarMenuButton className="text-destructive">
-              <ArrowLeftIcon />
-              <span>Sair</span>
-            </SidebarMenuButton>
-          </NavLink>
+          <SidebarMenuButton className="text-destructive" onClick={logout}>
+            <ArrowLeftIcon />
+            <span>Sair</span>
+          </SidebarMenuButton>
         </SidebarMenuItem>
 
         <SidebarSeparator />
@@ -96,12 +98,13 @@ export function EmpresaHomePage() {
         <SidebarFooter>
           <div className="flex flex-row items-center gap-4">
             <Avatar>
-              <AvatarImage src="/avatars/01.png" alt="Logo da empresa" />
-              <AvatarFallback className="bg-primary text-white">EM</AvatarFallback>
+              <AvatarFallback className="bg-primary text-white">
+                {getInitials(user?.name ?? "")}
+              </AvatarFallback>
             </Avatar>
             <div className="data-[collapsible=icon]:hidden">
-              <p className="text-sm font-medium">{empresaData.nome}</p>
-              <p className="text-xs text-muted-foreground">{empresaData.email}</p>
+              <p className="text-sm font-medium">{user?.name}</p>
+              <p className="text-xs text-muted-foreground">{user?.email}</p>
             </div>
           </div>
         </SidebarFooter>
@@ -118,7 +121,7 @@ export function EmpresaHomePage() {
         </header>
 
         <main className="flex flex-1 flex-col gap-6 px-6 pb-6">
-          <Outlet context={updateSidebarData} />
+          <Outlet />
         </main>
       </SidebarInset>
     </SidebarProvider>

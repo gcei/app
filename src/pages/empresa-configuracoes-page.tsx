@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { useOutletContext } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -11,35 +10,77 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
-
-type EmpresaConfiguracoesState = {
-  nome: string
-  email: string
-  exibirNome: boolean
-  exibirEmail: boolean
-  senhaAtual: string
-  novaSenha: string
-  confirmarSenha: string
-}
-
-const initialState: EmpresaConfiguracoesState = {
-  nome: "Usuário parceiro",
-  email: "contato@ifal.com.br",
-  exibirNome: false,
-  exibirEmail: false,
-  senhaAtual: "",
-  novaSenha: "",
-  confirmarSenha: "",
-}
+import { useAuth } from "@/contexts/AuthContext"
+import { useUpdateUser } from "@/hooks/api/use-users"
 
 export function EmpresaConfiguracoesPage() {
-  const [formState, setFormState] = useState<EmpresaConfiguracoesState>(initialState)
-  const [mensagemPerfil, setMensagemPerfil] = useState("")
-  const updateSidebarData = useOutletContext<(data: { nome: string; email: string }) => void>()
-  const [mensagemSenha, setMensagemSenha] = useState("")
+  const { user } = useAuth()
+  const updateProfile = useUpdateUser()
+  const updatePassword = useUpdateUser()
 
-  const empresaConfidencial = !formState.exibirNome && !formState.exibirEmail
+  const [perfil, setPerfil] = useState({
+    nome: user?.name ?? "",
+    email: user?.email ?? "",
+  })
+  const [senha, setSenha] = useState({ novaSenha: "", confirmarSenha: "" })
+  const [mensagemPerfil, setMensagemPerfil] = useState<
+    { tipo: "ok" | "erro"; texto: string } | null
+  >(null)
+  const [mensagemSenha, setMensagemSenha] = useState<
+    { tipo: "ok" | "erro"; texto: string } | null
+  >(null)
+
+  const handleSavePerfil = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!user) return
+    setMensagemPerfil(null)
+    updateProfile.mutate(
+      {
+        id: user.id,
+        payload: { name: perfil.nome.trim(), email: perfil.email.trim() },
+      },
+      {
+        onSuccess: () =>
+          setMensagemPerfil({ tipo: "ok", texto: "Dados do usuário atualizados." }),
+        onError: () =>
+          setMensagemPerfil({
+            tipo: "erro",
+            texto: "Não foi possível atualizar o perfil.",
+          }),
+      },
+    )
+  }
+
+  const handleSaveSenha = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!user) return
+    setMensagemSenha(null)
+    if (senha.novaSenha.length < 6) {
+      setMensagemSenha({
+        tipo: "erro",
+        texto: "A nova senha deve ter ao menos 6 caracteres.",
+      })
+      return
+    }
+    if (senha.novaSenha !== senha.confirmarSenha) {
+      setMensagemSenha({ tipo: "erro", texto: "As senhas não coincidem." })
+      return
+    }
+    updatePassword.mutate(
+      { id: user.id, payload: { password: senha.novaSenha } },
+      {
+        onSuccess: () => {
+          setMensagemSenha({ tipo: "ok", texto: "Senha atualizada." })
+          setSenha({ novaSenha: "", confirmarSenha: "" })
+        },
+        onError: () =>
+          setMensagemSenha({
+            tipo: "erro",
+            texto: "Não foi possível atualizar a senha.",
+          }),
+      },
+    )
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -51,23 +92,17 @@ export function EmpresaConfiguracoesPage() {
           Configurações - Gerencie seu perfil de acesso.
         </p>
       </div>
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Perfil do usuário</CardTitle>
-          <CardDescription>
-            Configure seu perfil.
-          </CardDescription>
+          <CardDescription>Atualize seu nome e e-mail.</CardDescription>
         </CardHeader>
         <CardContent>
           <form
             id="empresa-perfil-form"
             className="flex flex-col gap-6"
-            onSubmit={(event) => {
-              event.preventDefault()
-              updateSidebarData({ nome: formState.nome, email: formState.email })
-              setMensagemPerfil("Dados do usuário atualizados.")
-            }}
+            onSubmit={handleSavePerfil}
           >
             <div className="grid gap-4 md:grid-cols-2">
               <div className="flex flex-col gap-2">
@@ -77,11 +112,11 @@ export function EmpresaConfiguracoesPage() {
                 <Input
                   id="empresa-nome"
                   name="nome"
-                  autoComplete="organization"
-                  value={formState.nome}
+                  autoComplete="name"
+                  value={perfil.nome}
                   onChange={(event) => {
-                    setFormState((current) => ({ ...current, nome: event.target.value }))
-                    setMensagemPerfil("")
+                    setPerfil((c) => ({ ...c, nome: event.target.value }))
+                    setMensagemPerfil(null)
                   }}
                   placeholder="Digite o nome do usuário…"
                 />
@@ -97,24 +132,34 @@ export function EmpresaConfiguracoesPage() {
                   type="email"
                   autoComplete="email"
                   spellCheck={false}
-                  value={formState.email}
+                  value={perfil.email}
                   onChange={(event) => {
-                    setFormState((current) => ({ ...current, email: event.target.value }))
-                    setMensagemPerfil("")
+                    setPerfil((c) => ({ ...c, email: event.target.value }))
+                    setMensagemPerfil(null)
                   }}
                   placeholder="Digite o e-mail do usuário…"
                 />
               </div>
             </div>
-
           </form>
         </CardContent>
         <CardFooter className="justify-between gap-3">
-          <p aria-live="polite" className="text-sm text-muted-foreground">
-            {mensagemPerfil}
+          <p
+            aria-live="polite"
+            className={`text-sm ${
+              mensagemPerfil?.tipo === "erro"
+                ? "text-destructive"
+                : "text-muted-foreground"
+            }`}
+          >
+            {mensagemPerfil?.texto ?? ""}
           </p>
-          <Button type="submit" form="empresa-perfil-form">
-            Salvar perfil
+          <Button
+            type="submit"
+            form="empresa-perfil-form"
+            disabled={updateProfile.isPending}
+          >
+            {updateProfile.isPending ? "Salvando…" : "Salvar perfil"}
           </Button>
         </CardFooter>
       </Card>
@@ -122,47 +167,15 @@ export function EmpresaConfiguracoesPage() {
       <Card>
         <CardHeader>
           <CardTitle>Senha</CardTitle>
-          <CardDescription>
-            Atualize a senha de acesso da conta do usuário.
-          </CardDescription>
+          <CardDescription>Atualize a senha de acesso da conta.</CardDescription>
         </CardHeader>
         <CardContent>
           <form
             id="empresa-senha-form"
             className="flex flex-col gap-4"
-            onSubmit={(event) => {
-              event.preventDefault()
-              setMensagemSenha("Senha atualizada.")
-              setFormState((current) => ({
-                ...current,
-                senhaAtual: "",
-                novaSenha: "",
-                confirmarSenha: "",
-              }))
-            }}
+            onSubmit={handleSaveSenha}
           >
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="flex flex-col gap-2">
-                <label htmlFor="empresa-senha-atual" className="text-sm font-medium">
-                  Senha atual
-                </label>
-                <Input
-                  id="empresa-senha-atual"
-                  name="senha_atual"
-                  type="password"
-                  autoComplete="current-password"
-                  value={formState.senhaAtual}
-                  onChange={(event) => {
-                    setFormState((current) => ({
-                      ...current,
-                      senhaAtual: event.target.value,
-                    }))
-                    setMensagemSenha("")
-                  }}
-                  placeholder="Digite a senha atual…"
-                />
-              </div>
-
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="flex flex-col gap-2">
                 <label htmlFor="empresa-nova-senha" className="text-sm font-medium">
                   Nova senha
@@ -172,13 +185,10 @@ export function EmpresaConfiguracoesPage() {
                   name="nova_senha"
                   type="password"
                   autoComplete="new-password"
-                  value={formState.novaSenha}
+                  value={senha.novaSenha}
                   onChange={(event) => {
-                    setFormState((current) => ({
-                      ...current,
-                      novaSenha: event.target.value,
-                    }))
-                    setMensagemSenha("")
+                    setSenha((c) => ({ ...c, novaSenha: event.target.value }))
+                    setMensagemSenha(null)
                   }}
                   placeholder="Digite a nova senha…"
                 />
@@ -193,13 +203,10 @@ export function EmpresaConfiguracoesPage() {
                   name="confirmar_senha"
                   type="password"
                   autoComplete="new-password"
-                  value={formState.confirmarSenha}
+                  value={senha.confirmarSenha}
                   onChange={(event) => {
-                    setFormState((current) => ({
-                      ...current,
-                      confirmarSenha: event.target.value,
-                    }))
-                    setMensagemSenha("")
+                    setSenha((c) => ({ ...c, confirmarSenha: event.target.value }))
+                    setMensagemSenha(null)
                   }}
                   placeholder="Confirme a nova senha…"
                 />
@@ -208,11 +215,22 @@ export function EmpresaConfiguracoesPage() {
           </form>
         </CardContent>
         <CardFooter className="justify-between gap-3">
-          <p aria-live="polite" className="text-sm text-muted-foreground">
-            {mensagemSenha}
+          <p
+            aria-live="polite"
+            className={`text-sm ${
+              mensagemSenha?.tipo === "erro"
+                ? "text-destructive"
+                : "text-muted-foreground"
+            }`}
+          >
+            {mensagemSenha?.texto ?? ""}
           </p>
-          <Button type="submit" form="empresa-senha-form">
-            Atualizar senha
+          <Button
+            type="submit"
+            form="empresa-senha-form"
+            disabled={updatePassword.isPending}
+          >
+            {updatePassword.isPending ? "Salvando…" : "Atualizar senha"}
           </Button>
         </CardFooter>
       </Card>

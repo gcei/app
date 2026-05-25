@@ -23,6 +23,7 @@ import {
   SidebarSeparator,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { useAuth } from "@/contexts/AuthContext"
 
 const internoSections = [
   {
@@ -57,7 +58,20 @@ const internoSections = [
   },
 ] as const
 
+function getInitials(nome: string) {
+  return (
+    nome
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((parte) => parte[0]?.toUpperCase() ?? "")
+      .join("") || "?"
+  )
+}
+
 export function InternoHomePage() {
+  const { user, logout } = useAuth()
+
   return (
     <SidebarProvider>
       <Sidebar collapsible="icon">
@@ -87,12 +101,10 @@ export function InternoHomePage() {
         </SidebarContent>
 
         <SidebarMenuItem className="mb-3">
-          <NavLink to="/login">
-            <SidebarMenuButton className="text-destructive">
-              <ArrowLeftIcon />
-              <span>Sair</span>
-            </SidebarMenuButton>
-          </NavLink>
+          <SidebarMenuButton className="text-destructive" onClick={logout}>
+            <ArrowLeftIcon />
+            <span>Sair</span>
+          </SidebarMenuButton>
         </SidebarMenuItem>
 
         <SidebarSeparator />
@@ -100,11 +112,13 @@ export function InternoHomePage() {
         <SidebarFooter>
           <div className="flex flex-row items-center gap-4">
             <Avatar>
-              <AvatarFallback className="bg-primary text-white">IN</AvatarFallback>
+              <AvatarFallback className="bg-primary text-white">
+                {getInitials(user?.name ?? "")}
+              </AvatarFallback>
             </Avatar>
             <div className="data-[collapsible=icon]:hidden">
-              <p className="text-sm font-medium">Acesso interno</p>
-              <p className="text-xs text-muted-foreground">interno@ifal.edu.br</p>
+              <p className="text-sm font-medium">{user?.name}</p>
+              <p className="text-xs text-muted-foreground">{user?.email}</p>
             </div>
           </div>
         </SidebarFooter>

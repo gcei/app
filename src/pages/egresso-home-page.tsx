@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom"
+import { useAuth } from "@/contexts/AuthContext"
 import { useUser } from "@/contexts/UserContext"
 
 import {
@@ -21,7 +22,7 @@ import {
   IdentificationCardIcon,
   InfoIcon,
 } from "@phosphor-icons/react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 const egressoSections = [
   {
@@ -39,9 +40,21 @@ const egressoSections = [
   },
 ] as const
 
+function getInitials(nome: string) {
+  return (
+    nome
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((parte) => parte[0]?.toUpperCase() ?? "")
+      .join("") || "?"
+  )
+}
+
 export function EgressoHomePage() {
   const { userData } = useUser()
-  
+  const { logout } = useAuth()
+
   return (
     <SidebarProvider>
       <Sidebar collapsible="icon">
@@ -71,12 +84,10 @@ export function EgressoHomePage() {
         </SidebarContent>
 
         <SidebarMenuItem className="mb-3">
-          <NavLink to="/login">
-            <SidebarMenuButton className="text-destructive">
-              <ArrowLeftIcon />
-              <span>Sair</span>
-            </SidebarMenuButton>
-          </NavLink>
+          <SidebarMenuButton className="text-destructive" onClick={logout}>
+            <ArrowLeftIcon />
+            <span>Sair</span>
+          </SidebarMenuButton>
         </SidebarMenuItem>
 
         <SidebarSeparator />
@@ -84,8 +95,9 @@ export function EgressoHomePage() {
         <SidebarFooter>
           <div className="flex-row flex items-center gap-4">
             <Avatar>
-              <AvatarImage src="/avatars/01.png" alt="User" />
-              <AvatarFallback className="bg-primary text-white">NE</AvatarFallback>
+              <AvatarFallback className="bg-primary text-white">
+                {getInitials(userData.nome)}
+              </AvatarFallback>
             </Avatar>
             <div className="data-[collapsible=icon]:hidden">
               <p className="text-sm font-medium">{userData.nome}</p>
