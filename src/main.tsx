@@ -8,6 +8,7 @@ import "./index.css"
 import App from "./App.tsx"
 import { ThemeProvider } from "@/components/theme-provider.tsx"
 import { TooltipProvider } from "./components/ui/tooltip.tsx"
+import { AuthProvider } from "@/contexts/AuthContext"
 import { UserProvider } from "@/contexts/UserContext"
 
 const queryClient = new QueryClient({
@@ -25,13 +26,15 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
-        <UserProvider>
-          <ThemeProvider>
-            <TooltipProvider>
-              <App />
-            </TooltipProvider>
-          </ThemeProvider>
-        </UserProvider>
+        <AuthProvider>
+          <UserProvider>
+            <ThemeProvider>
+              <TooltipProvider>
+                <App />
+              </TooltipProvider>
+            </ThemeProvider>
+          </UserProvider>
+        </AuthProvider>
         {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>
     </BrowserRouter>

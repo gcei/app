@@ -4,11 +4,8 @@ import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import {
-  egressoJaRespondeuFormAtivo,
-  getActiveForm,
-  setEgressoAtual,
-} from "@/lib/pesquisa-form-storage"
+import { useAuth } from "@/contexts/AuthContext"
+import { ApiError } from "@/lib/api/http"
 
 type AccessMode = "egresso" | "empresa"
 
@@ -24,41 +21,56 @@ const emailPlaceholders: Record<AccessMode, string> = {
 
 export function LoginPage() {
   const navigate = useNavigate()
+  const { login } = useAuth()
   const [accessMode, setAccessMode] = useState<AccessMode>("egresso")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const switchMode = () => {
     setAccessMode((mode) => (mode === "egresso" ? "empresa" : "egresso"))
     setEmail("")
     setPassword("")
+    setError(null)
   }
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    setError(null)
+    setSubmitting(true)
 
-    if (accessMode === "empresa") {
-      navigate("/home/empresas")
-      return
+    try {
+      const user = await login({
+        email: email.trim().toLowerCase(),
+        password,
+      })
+
+      // ADMIN = staff IFAL → área de empresas.
+      if (user.role === "ADMIN") {
+        navigate("/home/empresas", { replace: true })
+        return
+      }
+
+      // STUDENT = egresso. A pesquisa é acessada por link (slug), não há
+      // descoberta de "form ativo" na API (/forms é admin-only).
+      navigate("/home/egresso", { replace: true })
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        setError("E-mail ou senha inválidos.")
+      } else if (err instanceof ApiError) {
+        setError(err.message)
+      } else {
+        setError("Não foi possível entrar. Tente novamente.")
+      }
+    } finally {
+      setSubmitting(false)
     }
-
-    const emailNormalizado = email.trim().toLowerCase()
-    setEgressoAtual({
-      email: emailNormalizado,
-      nome: emailNormalizado.split("@")[0] || "Egresso",
-    })
-
-    const ativo = getActiveForm()
-    const precisaResponder =
-      !!ativo &&
-      ativo.perguntas.length > 0 &&
-      !egressoJaRespondeuFormAtivo(emailNormalizado)
-
-    navigate(precisaResponder ? "/pesquisa-anual" : "/home/egresso")
   }
 
   const handleForgotPassword = () => {
-    // Simular envio de email com instruções
+    // Simular envio de email com instruções (reset de senha ainda não
+    // implementado no backend — POST /auth/reset-password responde 501).
     alert("Instruções enviadas para o seu e-mail cadastrado!")
   }
 
@@ -103,6 +115,7 @@ export function LoginPage() {
                   placeholder={emailPlaceholders[accessMode]}
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
+                  disabled={submitting}
                   required
                 />
               </div>
@@ -123,6 +136,7 @@ export function LoginPage() {
                   placeholder="Digite sua senha"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
+                  disabled={submitting}
                   required
                 />
                 <div className="flex justify-end">
@@ -136,8 +150,17 @@ export function LoginPage() {
                 </div>
               </div>
 
-              <Button type="submit" className="mt-1 w-full">
-                Entrar
+              {error ? (
+                <p
+                  role="alert"
+                  className="text-sm font-medium text-destructive"
+                >
+                  {error}
+                </p>
+              ) : null}
+
+              <Button type="submit" className="mt-1 w-full" disabled={submitting}>
+                {submitting ? "Entrando…" : "Entrar"}
               </Button>
 
               <div className="flex justify-center pt-1 text-sm text-muted-foreground">
@@ -146,6 +169,7 @@ export function LoginPage() {
                   variant="link"
                   className="h-auto px-0"
                   onClick={switchMode}
+                  disabled={submitting}
                 >
                   {accessMode === "egresso"
                     ? accessLabels.empresa

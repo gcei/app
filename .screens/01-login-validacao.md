@@ -23,11 +23,11 @@ Concentrar o acesso inicial com foco em egresso por padrão e atalho simples par
 - Identidade do GCEI e vínculo com o IFAL
 - Marca temporária usando `react.svg` enquanto o logo oficial não existir
 - Fluxo inicial padrão para egresso
-- Campo de CPF para egresso
+- Campos de e-mail e senha para egresso
 - Campos de e-mail e senha para empresa
+- Link `Esqueci minha senha` em ambos os modos
 - Botão primário de entrada
 - Logo abaixo do botão principal, atalho simples `Sou empresa`
-- Texto curto abaixo do CPF informando a validação no SISTEC
 
 ## Componentes `shadcn` Preferenciais
 
@@ -46,17 +46,17 @@ Concentrar o acesso inicial com foco em egresso por padrão e atalho simples par
 ## Regras de Negócio Visíveis
 
 - O fluxo padrão exibido ao abrir a tela é o de egresso
-- O egresso entra por CPF e depende de validação no SISTEC
+- O egresso entra por e-mail e senha
 - A empresa entra por e-mail e senha
 - O acesso interno usa o mesmo acesso de empresa nesta etapa
-- Em caso de CPF não encontrado ou não elegível, o fluxo do egresso deve bloquear avanço
+- Em caso de credenciais inválidas, o fluxo deve bloquear o avanço com mensagem de erro
 
 ## Estados Necessários
 
 - Carregando: botão desabilitado com `spinner`
 - Erro de validação: mensagem objetiva com próximo passo
 - Sucesso: redirecionamento para pesquisa anual ou painel
-- Bloqueio: CPF válido, mas sem status de egresso
+- Bloqueio: usuário válido, mas sem permissão de acesso
 
 ## Checklist de Planejamento
 
@@ -65,7 +65,6 @@ Concentrar o acesso inicial com foco em egresso por padrão e atalho simples par
 - Botão de ação principal sem ruído adicional
 - Foco visível no campo e no botão
 - Não usar ilustração com gradiente
-- Aplicar máscara de CPF durante a digitação
 - Garantir que `Sou empresa` fique abaixo da ação principal no fluxo padrão
 
 ## Observações
