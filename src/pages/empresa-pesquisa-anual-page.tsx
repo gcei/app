@@ -1,6 +1,13 @@
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import { NavLink, useNavigate } from "react-router-dom"
-import { DownloadSimpleIcon, PencilSimpleIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react"
+import {
+  ChartBarIcon,
+  DownloadSimpleIcon,
+  LinkIcon,
+  PencilSimpleIcon,
+  PlusIcon,
+  TrashIcon,
+} from "@phosphor-icons/react"
 
 import {
   AlertDialog,
@@ -15,7 +22,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Switch } from "@/components/ui/switch"
 import {
   Table,
   TableBody,
@@ -24,46 +30,61 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ExportPesquisaDialog } from "@/components/export-pesquisa-dialog"
-import {
-  type PesquisaForm,
-  createForm,
-  deleteForm,
-  getForms,
-  getRespostas,
-  setFormAtivo,
-} from "@/lib/pesquisa-form-storage"
+import { useDeleteForm, useForms } from "@/hooks/api/use-forms"
+import { exportFormResultsCsv } from "@/lib/api/forms"
+import type { FormListItem } from "@/lib/api/types"
+import { downloadBlob } from "@/lib/download"
 
-function formatarData(iso: string) {
+function formatDate(iso: string | null) {
+  if (!iso) return "—"
   const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso
-  return date.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
+  if (Number.isNaN(date.getTime())) return "—"
+  return date.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  })
+}
+
+function formStatus(form: FormListItem): string {
+  const now = Date.now()
+  const opens = new Date(form.opensAt).getTime()
+  const closes = form.closesAt ? new Date(form.closesAt).getTime() : null
+  if (now < opens) return "Agendado"
+  if (closes && now > closes) return "Encerrado"
+  return "Aberto"
 }
 
 export function EmpresaPesquisaAnualPage() {
   const navigate = useNavigate()
-  const [forms, setForms] = useState<PesquisaForm[]>(() => getForms())
-  const respostasCount = useMemo<Record<string, number>>(
-    () =>
-      forms.reduce<Record<string, number>>((acc, f) => {
-        acc[f.id] = getRespostas(f.id).length
-        return acc
-      }, {}),
-    [forms]
-  )
+  const formsQuery = useForms()
+  const deleteForm = useDeleteForm()
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
-  const handleToggleAtivo = (id: string, ativo: boolean) => {
-    setForms(setFormAtivo(id, ativo))
+  const forms = formsQuery.data?.data ?? []
+
+  const handleExport = async (form: FormListItem) => {
+    setActionError(null)
+    setBusyId(form.id)
+    try {
+      const blob = await exportFormResultsCsv(form.id)
+      downloadBlob(blob, `${form.title}-respostas.csv`)
+    } catch {
+      setActionError("Não foi possível exportar as respostas.")
+    } finally {
+      setBusyId(null)
+    }
   }
 
-  const handleCreate = () => {
-    const novo = createForm()
-    setForms(getForms())
-    navigate(`/home/empresas/pesquisa-anual/${novo.id}/editar`)
-  }
-
-  const handleDelete = (id: string) => {
-    setForms(deleteForm(id))
+  const handleCopyLink = async (form: FormListItem) => {
+    setActionError(null)
+    const url = `${window.location.origin}/pesquisa/${form.slug}`
+    try {
+      await navigator.clipboard.writeText(url)
+    } catch {
+      setActionError(`Link da pesquisa: ${url}`)
+    }
   }
 
   return (
@@ -74,24 +95,44 @@ export function EmpresaPesquisaAnualPage() {
             Gestão de Currículos de Egressos do IFAL
           </h1>
           <p className="text-sm leading-6 text-muted-foreground">
-            Pesquisa do egresso - Cadastre e ative formulários aplicados no login dos egressos.
+            Pesquisa do egresso - Cadastre formulários e compartilhe o link com os
+            egressos.
           </p>
         </div>
-        <Button onClick={handleCreate}>
+        <Button onClick={() => navigate("/home/empresas/pesquisa-anual/novo")}>
           <PlusIcon aria-hidden="true" />
           Novo formulário
         </Button>
       </div>
 
+      {actionError ? (
+        <p role="alert" className="text-sm font-medium text-destructive">
+          {actionError}
+        </p>
+      ) : null}
+
       <Card>
         <CardContent>
-          {forms.length === 0 ? (
+          {formsQuery.isLoading ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              Carregando formulários…
+            </p>
+          ) : formsQuery.isError ? (
+            <div className="flex flex-col items-center gap-3 py-8">
+              <p className="text-sm text-destructive">
+                Não foi possível carregar os formulários.
+              </p>
+              <Button variant="outline" size="sm" onClick={() => formsQuery.refetch()}>
+                Tentar novamente
+              </Button>
+            </div>
+          ) : forms.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border/80 bg-card/60 p-8 text-center">
               <p className="text-sm font-medium text-foreground">
                 Nenhum formulário cadastrado
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
-                Clique em "Novo formulário" para criar o primeiro.
+                Clique em “Novo formulário” para criar o primeiro.
               </p>
             </div>
           ) : (
@@ -99,64 +140,57 @@ export function EmpresaPesquisaAnualPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Formulário</TableHead>
-                  <TableHead>Perguntas</TableHead>
-                  <TableHead>Respostas</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Última atualização</TableHead>
+                  <TableHead>Abre em</TableHead>
+                  <TableHead>Fecha em</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {forms.map((form) => (
                   <TableRow key={form.id}>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        <span className="font-medium">{form.titulo}</span>
-                        {form.descricao ? (
-                          <span className="text-sm text-muted-foreground line-clamp-2">
-                            {form.descricao}
-                          </span>
-                        ) : null}
-                      </div>
-                    </TableCell>
-                    <TableCell>{form.perguntas.length}</TableCell>
-                    <TableCell>{respostasCount[form.id] ?? 0}</TableCell>
-                    <TableCell>
-                      <label className="flex items-center gap-2">
-                        <Switch
-                          checked={form.ativo}
-                          onCheckedChange={(next) => handleToggleAtivo(form.id, next)}
-                          aria-label={`Ativar formulário ${form.titulo}`}
-                        />
-                        <span
-                          className={`text-xs font-medium ${
-                            form.ativo ? "text-primary" : "text-muted-foreground"
-                          }`}
-                        >
-                          {form.ativo ? "Ativo" : "Inativo"}
-                        </span>
-                      </label>
+                    <TableCell className="font-medium">{form.title}</TableCell>
+                    <TableCell>{formStatus(form)}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {formatDate(form.opensAt)}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {formatarData(form.atualizadoEm)}
+                      {formatDate(form.closesAt)}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1.5">
-                        <ExportPesquisaDialog
-                          form={form}
-                          disabled={(respostasCount[form.id] ?? 0) === 0}
-                          trigger={
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              title="Exportar resultados"
-                              aria-label="Exportar resultados"
-                              disabled={(respostasCount[form.id] ?? 0) === 0}
-                            >
-                              <DownloadSimpleIcon aria-hidden="true" />
-                            </Button>
-                          }
-                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleCopyLink(form)}
+                          title="Copiar link de preenchimento"
+                          aria-label="Copiar link de preenchimento"
+                        >
+                          <LinkIcon aria-hidden="true" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          asChild
+                          title="Ver respostas"
+                        >
+                          <NavLink
+                            to={`/home/empresas/pesquisa-anual/${form.id}/respostas`}
+                            aria-label="Ver respostas"
+                          >
+                            <ChartBarIcon aria-hidden="true" />
+                          </NavLink>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleExport(form)}
+                          disabled={busyId === form.id}
+                          title="Exportar respostas (CSV)"
+                          aria-label="Exportar respostas (CSV)"
+                        >
+                          <DownloadSimpleIcon aria-hidden="true" />
+                        </Button>
                         <Button
                           variant="outline"
                           size="icon"
@@ -188,7 +222,7 @@ export function EmpresaPesquisaAnualPage() {
                               <AlertDialogDescription>
                                 Tem certeza que deseja excluir{" "}
                                 <span className="font-medium text-foreground">
-                                  {form.titulo}
+                                  {form.title}
                                 </span>
                                 ? Esta ação não pode ser desfeita.
                               </AlertDialogDescription>
@@ -196,7 +230,7 @@ export function EmpresaPesquisaAnualPage() {
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancelar</AlertDialogCancel>
                               <AlertDialogAction
-                                onClick={() => handleDelete(form.id)}
+                                onClick={() => deleteForm.mutate(form.id)}
                                 className="bg-destructive text-white hover:bg-destructive/90"
                               >
                                 Excluir

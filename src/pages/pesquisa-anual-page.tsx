@@ -1,134 +1,188 @@
 import { useMemo, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
-import {
-  addResposta,
-  getActiveForm,
-  getEgressoAtual,
-} from "@/lib/pesquisa-form-storage"
+import { useFormFill, useSubmitFormFill } from "@/hooks/api/use-forms"
+import { ApiError } from "@/lib/api/http"
 
 export function PesquisaAnualPage() {
+  const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
-  const form = useMemo(() => getActiveForm(), [])
-  const egresso = useMemo(() => getEgressoAtual(), [])
+  const fillQuery = useFormFill(slug)
+  const submit = useSubmitFormFill(slug ?? "")
   const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [error, setError] = useState<string | null>(null)
 
-  const answeredAllQuestions = !!form && form.perguntas.every((p) => answers[p.id])
+  const form = fillQuery.data
+  const [now] = useState(() => Date.now())
+  const notOpenYet = form ? now < new Date(form.opensAt).getTime() : false
+  const closed =
+    form && form.closesAt ? now > new Date(form.closesAt).getTime() : false
+
+  const answeredAll = useMemo(
+    () => !!form && form.questions.every((q) => answers[q.id]),
+    [form, answers],
+  )
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!answeredAllQuestions || !form) return
-
-    if (egresso) {
-      addResposta({
-        formId: form.id,
-        egressoCpf: egresso.email,
-        egressoNome: egresso.nome,
-        respostas: answers,
-      })
-    }
-
-    navigate("/home/egresso")
+    if (!form || !slug || !answeredAll) return
+    setError(null)
+    submit.mutate(
+      {
+        answers: form.questions.map((q) => ({
+          questionId: q.id,
+          optionId: answers[q.id],
+        })),
+      },
+      {
+        onSuccess: () => navigate("/home/egresso", { replace: true }),
+        onError: (err) => {
+          if (err instanceof ApiError && err.status === 409) {
+            setError("Você já respondeu esta pesquisa.")
+          } else if (err instanceof ApiError && err.status === 403) {
+            setError("Esta pesquisa não está disponível para envio.")
+          } else {
+            setError("Não foi possível enviar suas respostas. Tente novamente.")
+          }
+        },
+      },
+    )
   }
 
   return (
     <main className="min-h-svh bg-background px-6 py-8">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
-        <header className="flex flex-col gap-2">
-          <p className="text-sm font-medium text-muted-foreground">
-            {form?.titulo ?? "Pesquisa do egresso"}
+        {fillQuery.isLoading ? (
+          <p className="py-10 text-center text-sm text-muted-foreground">
+            Carregando pesquisa…
           </p>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-            Atualize suas informações antes de continuar
-          </h1>
-          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-            {form?.descricao ?? ""}
-          </p>
-        </header>
+        ) : fillQuery.isError || !form ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Pesquisa não encontrada</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <p className="text-sm text-muted-foreground">
+                O link da pesquisa é inválido ou expirou.
+              </p>
+              <Button
+                variant="outline"
+                className="self-start"
+                onClick={() => navigate("/home/egresso")}
+              >
+                Voltar
+              </Button>
+            </CardContent>
+          </Card>
+        ) : form.alreadySubmitted ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>{form.title}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <p className="text-sm text-muted-foreground">
+                Você já respondeu esta pesquisa. Obrigado pela participação!
+              </p>
+              <Button
+                variant="outline"
+                className="self-start"
+                onClick={() => navigate("/home/egresso")}
+              >
+                Voltar
+              </Button>
+            </CardContent>
+          </Card>
+        ) : notOpenYet || closed ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>{form.title}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <p className="text-sm text-muted-foreground">
+                {notOpenYet
+                  ? "Esta pesquisa ainda não está aberta para respostas."
+                  : "O período de respostas desta pesquisa foi encerrado."}
+              </p>
+              <Button
+                variant="outline"
+                className="self-start"
+                onClick={() => navigate("/home/egresso")}
+              >
+                Voltar
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+            <header className="flex flex-col gap-2">
+              <p className="text-sm font-medium text-muted-foreground">
+                Pesquisa do egresso
+              </p>
+              <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+                {form.title}
+              </h1>
+            </header>
 
-        <Card className="border py-0 ring-0 shadow-none">
-          <CardHeader className="border-b py-6">
-            <CardTitle>Questionário</CardTitle>
-          </CardHeader>
-
-          <CardContent className="py-6">
-            {!form || form.perguntas.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border/80 bg-card/60 p-8 text-center">
-                <p className="text-sm font-medium text-foreground">
-                  Nenhuma pergunta disponível
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  O formulário ainda não possui perguntas cadastradas.
-                </p>
-                <div className="mt-4 flex justify-center">
-                  <Button type="button" onClick={() => navigate("/home/egresso")}>
-                    Continuar
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
-                {form!.perguntas.map((question, index) => (
-                  <div key={question.id} className="flex flex-col gap-4">
-                    {index > 0 ? <Separator /> : null}
-
-                    <div className="flex flex-col gap-3 pt-1">
-                      <fieldset className="flex flex-col gap-3">
-                        <legend className="text-base font-medium text-foreground">
-                          {`${index + 1}. ${question.enunciado}`}
-                        </legend>
-
-                        <RadioGroup
-                          value={answers[question.id]}
-                          onValueChange={(value) =>
-                            setAnswers((current) => ({
-                              ...current,
-                              [question.id]: value,
-                            }))
-                          }
+            <div className="flex flex-col gap-6">
+              {form.questions.map((question, index) => (
+                <Card key={question.id}>
+                  <CardHeader>
+                    <CardTitle className="text-base">
+                      {index + 1}. {question.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <RadioGroup
+                      value={answers[question.id] ?? ""}
+                      onValueChange={(value) =>
+                        setAnswers((current) => ({
+                          ...current,
+                          [question.id]: value,
+                        }))
+                      }
+                      className="flex flex-col gap-3"
+                    >
+                      {question.options.map((option) => (
+                        <label
+                          key={option.id}
+                          className="flex items-center gap-3 rounded-lg border p-3 text-sm"
                         >
-                          {question.opcoes.map((option) => {
-                            const optionId = `${question.id}-${option
-                              .toLowerCase()
-                              .replaceAll(/[^\p{L}\p{N}]+/gu, "-")
-                              .replace(/^-|-$/g, "")}`
+                          <RadioGroupItem value={option.id} />
+                          <span>{option.title}</span>
+                        </label>
+                      ))}
+                    </RadioGroup>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
 
-                            return (
-                              <label
-                                key={optionId}
-                                htmlFor={optionId}
-                                className="flex cursor-pointer items-start gap-3 rounded-lg border border-border px-4 py-3 transition-colors hover:bg-muted/40"
-                              >
-                                <RadioGroupItem id={optionId} value={option} />
-                                <span className="text-sm leading-6 text-foreground">
-                                  {option}
-                                </span>
-                              </label>
-                            )
-                          })}
-                        </RadioGroup>
-                      </fieldset>
-                    </div>
-                  </div>
-                ))}
+            {error ? (
+              <p role="alert" className="text-sm font-medium text-destructive">
+                {error}
+              </p>
+            ) : null}
 
-                <div className="flex flex-col gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm leading-6 text-muted-foreground">
-                    Todas as perguntas são obrigatórias.
-                  </p>
+            <Separator />
 
-                  <Button type="submit" disabled={!answeredAllQuestions}>
-                    Enviar respostas
-                  </Button>
-                </div>
-              </form>
-            )}
-          </CardContent>
-        </Card>
+            <div className="flex justify-end gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate("/home/egresso")}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={!answeredAll || submit.isPending}>
+                {submit.isPending ? "Enviando…" : "Enviar respostas"}
+              </Button>
+            </div>
+          </form>
+        )}
       </div>
     </main>
   )

@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom"
 
+import { ProtectedRoute } from "@/components/protected-route"
 import { EmpresaCandidatosPage } from "@/pages/empresa-candidatos-page"
 import { EmpresaCandidatoCurriculoPage } from "@/pages/empresa-candidato-curriculo-page"
 import { EgressoHomePage } from "@/pages/egresso-home-page"
@@ -10,6 +11,7 @@ import { EmpresaHomePage } from "@/pages/empresa-home-page"
 import { EmpresaConfiguracoesPage } from "@/pages/empresa-configuracoes-page"
 import { EmpresaPesquisaAnualPage } from "@/pages/empresa-pesquisa-anual-page"
 import { EmpresaPesquisaAnualEditarPage } from "@/pages/empresa-pesquisa-anual-editar-page"
+import { EmpresaPesquisaAnualRespostasPage } from "@/pages/empresa-pesquisa-anual-respostas-page"
 import { InternoHomePage } from "@/pages/interno-home-page"
 import { InternoInicioPage } from "@/pages/interno-inicio-page"
 import { InternoEmpresasCadastradasPage } from "@/pages/interno-empresas-cadastradas-page"
@@ -26,9 +28,10 @@ import { SobrePage } from "@/pages/sobre-page"
 export function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate replace to="/home/egresso/curriculo" />} />
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/pesquisa-anual" element={<PesquisaAnualPage />} />
+      <Route element={<ProtectedRoute />}>
+      <Route path="/" element={<Navigate replace to="/home/egresso/curriculo" />} />
+      <Route path="/pesquisa/:slug" element={<PesquisaAnualPage />} />
       <Route path="/home/egresso" element={<EgressoHomePage />}>
         <Route index element={<Navigate replace to="curriculo" />} />
         <Route path="curriculo" element={<EgressoCurriculosPage />} />
@@ -52,8 +55,16 @@ export function App() {
           element={<EmpresaPesquisaAnualPage />}
         />
         <Route
+          path="pesquisa-anual/novo"
+          element={<EmpresaPesquisaAnualEditarPage />}
+        />
+        <Route
           path="pesquisa-anual/:formId/editar"
           element={<EmpresaPesquisaAnualEditarPage />}
+        />
+        <Route
+          path="pesquisa-anual/:formId/respostas"
+          element={<EmpresaPesquisaAnualRespostasPage />}
         />
         <Route
           path="configuracoes"
@@ -96,6 +107,7 @@ export function App() {
           element={<InternoEmpresaEditarPage />}
         />
         <Route path="configuracoes" element={<EgressoConfiguracoesPage />} />
+      </Route>
       </Route>
     </Routes>
   )

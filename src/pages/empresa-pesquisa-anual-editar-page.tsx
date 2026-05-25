@@ -1,22 +1,7 @@
-import { useEffect, useMemo, useState } from "react"
+import { useState } from "react"
 import { NavLink, useNavigate, useParams } from "react-router-dom"
-import {
-  PencilSimpleIcon,
-  PlusIcon,
-  TrashIcon,
-} from "@phosphor-icons/react"
+import { PlusIcon, TrashIcon } from "@phosphor-icons/react"
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -30,167 +15,187 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Textarea } from "@/components/ui/textarea"
-import {
-  type PesquisaForm,
-  type PesquisaQuestion,
-  addPergunta,
-  getFormById,
-  removePergunta,
-  setFormAtivo,
-  updateFormMeta,
-  updatePergunta,
-} from "@/lib/pesquisa-form-storage"
+import { useCreateForm, useForm, useUpdateForm } from "@/hooks/api/use-forms"
+import type { CreateFormPayload, Form } from "@/lib/api/types"
 
-type OpcaoEdit = { id: string; value: string }
+interface OptionRow {
+  key: string
+  title: string
+}
+interface QuestionRow {
+  key: string
+  title: string
+  options: OptionRow[]
+}
+interface FormEditorState {
+  title: string
+  opensAt: string
+  closesAt: string
+  questions: QuestionRow[]
+}
 
-function createOpcao(value = ""): OpcaoEdit {
-  return { id: crypto.randomUUID(), value }
+const newKey = () => crypto.randomUUID()
+const emptyOption = (): OptionRow => ({ key: newKey(), title: "" })
+const emptyQuestion = (): QuestionRow => ({
+  key: newKey(),
+  title: "",
+  options: [emptyOption(), emptyOption()],
+})
+const emptyState = (): FormEditorState => ({
+  title: "",
+  opensAt: "",
+  closesAt: "",
+  questions: [emptyQuestion()],
+})
+
+const isoToDateInput = (iso: string | null) => (iso ? iso.slice(0, 10) : "")
+const dateInputToIso = (date: string) => `${date}T00:00:00.000Z`
+
+function mapFormToState(form: Form): FormEditorState {
+  return {
+    title: form.title,
+    opensAt: isoToDateInput(form.opensAt),
+    closesAt: isoToDateInput(form.closesAt),
+    questions: form.questions.map((q) => ({
+      key: newKey(),
+      title: q.title,
+      options: q.options.map((o) => ({ key: newKey(), title: o.title })),
+    })),
+  }
 }
 
 export function EmpresaPesquisaAnualEditarPage() {
   const { formId } = useParams()
-  const navigate = useNavigate()
+  if (!formId) {
+    return <FormEditorScreen mode="create" initial={emptyState()} />
+  }
+  return <EditLoader id={formId} />
+}
 
-  const [form, setForm] = useState<PesquisaForm | undefined>(() =>
-    formId ? getFormById(formId) : undefined
-  )
+function EditLoader({ id }: { id: string }) {
+  const { data: form, isLoading, isError, refetch } = useForm(id)
 
-  const [titulo, setTitulo] = useState(form?.titulo ?? "")
-  const [descricao, setDescricao] = useState(form?.descricao ?? "")
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [enunciado, setEnunciado] = useState("")
-  const [opcoes, setOpcoes] = useState<OpcaoEdit[]>([createOpcao(), createOpcao()])
-
-  useEffect(() => {
-    if (form) {
-      setTitulo(form.titulo)
-      setDescricao(form.descricao)
-    }
-  }, [form])
-
-  const metaDirty = useMemo(() => {
-    if (!form) return false
-    return titulo.trim() !== form.titulo || descricao.trim() !== form.descricao
-  }, [titulo, descricao, form])
-
-  const isDialogValid =
-    enunciado.trim().length > 0 &&
-    opcoes.filter((o) => o.value.trim().length > 0).length >= 2
-
-  if (!form || !formId) {
+  if (isLoading) {
     return (
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Gestão de Currículos de Egressos do IFAL
-          </h1>
-          <p className="text-sm leading-6 text-muted-foreground">
-            Pesquisa do egresso - Editar formulário.
-          </p>
-        </div>
-        <Card>
-          <CardHeader>
-            <CardTitle>Formulário não encontrado</CardTitle>
-            <CardDescription>
-              O formulário solicitado não existe ou já foi removido.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild variant="outline">
-              <NavLink to="/home/empresas/pesquisa-anual">
-                Voltar para listagem
-              </NavLink>
-            </Button>
-          </CardContent>
-        </Card>
+      <p className="py-10 text-center text-sm text-muted-foreground">
+        Carregando formulário…
+      </p>
+    )
+  }
+  if (isError || !form) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-10">
+        <p className="text-sm text-destructive">
+          Não foi possível carregar o formulário.
+        </p>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          Tentar novamente
+        </Button>
       </div>
     )
   }
+  return (
+    <FormEditorScreen
+      key={form.id}
+      mode="edit"
+      formId={form.id}
+      initial={mapFormToState(form)}
+    />
+  )
+}
 
-  const handleToggleAtivo = (next: boolean) => {
-    setFormAtivo(formId, next)
-    const updated = getFormById(formId)
-    if (updated) setForm(updated)
-  }
+interface FormEditorScreenProps {
+  mode: "create" | "edit"
+  initial: FormEditorState
+  formId?: string
+}
 
-  const handleSaveMeta = () => {
-    if (!metaDirty) return
-    const updated = updateFormMeta(formId, {
-      titulo: titulo.trim(),
-      descricao: descricao.trim(),
-    })
-    if (updated) setForm(updated)
-  }
+function FormEditorScreen({ mode, initial, formId }: FormEditorScreenProps) {
+  const navigate = useNavigate()
+  const createForm = useCreateForm()
+  const updateForm = useUpdateForm()
+  const [state, setState] = useState<FormEditorState>(initial)
+  const [error, setError] = useState<string | null>(null)
+  const isEdit = mode === "edit"
+  const isPending = createForm.isPending || updateForm.isPending
 
-  const openNew = () => {
-    setEditingId(null)
-    setEnunciado("")
-    setOpcoes([createOpcao(), createOpcao()])
-    setDialogOpen(true)
-  }
+  const updateQuestion = (key: string, patch: Partial<QuestionRow>) =>
+    setState((s) => ({
+      ...s,
+      questions: s.questions.map((q) => (q.key === key ? { ...q, ...patch } : q)),
+    }))
 
-  const openEdit = (pergunta: PesquisaQuestion) => {
-    setEditingId(pergunta.id)
-    setEnunciado(pergunta.enunciado)
-    setOpcoes(pergunta.opcoes.map((o) => createOpcao(o)))
-    setDialogOpen(true)
-  }
+  const updateOption = (qKey: string, oKey: string, title: string) =>
+    setState((s) => ({
+      ...s,
+      questions: s.questions.map((q) =>
+        q.key === qKey
+          ? {
+              ...q,
+              options: q.options.map((o) =>
+                o.key === oKey ? { ...o, title } : o,
+              ),
+            }
+          : q,
+      ),
+    }))
 
-  const handleSavePergunta = () => {
-    if (!isDialogValid) return
-    const opcoesValidas = opcoes.map((o) => o.value.trim()).filter(Boolean)
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setError(null)
 
-    const updated = editingId
-      ? updatePergunta(formId, editingId, {
-          enunciado: enunciado.trim(),
-          opcoes: opcoesValidas,
-        })
-      : addPergunta(formId, { enunciado: enunciado.trim(), opcoes: opcoesValidas })
+    if (!state.title.trim()) {
+      setError("Informe o título do formulário.")
+      return
+    }
+    if (!state.opensAt) {
+      setError("Informe a data de abertura.")
+      return
+    }
+    if (state.closesAt && state.closesAt < state.opensAt) {
+      setError("A data de fechamento não pode ser anterior à de abertura.")
+      return
+    }
 
-    if (updated) setForm(updated)
-    setDialogOpen(false)
-  }
+    const questions = state.questions
+      .map((q) => ({
+        title: q.title.trim(),
+        options: q.options.map((o) => o.title.trim()).filter(Boolean),
+      }))
+      .filter((q) => q.title && q.options.length >= 2)
 
-  const handleRemovePergunta = (id: string) => {
-    const updated = removePergunta(formId, id)
-    if (updated) setForm(updated)
+    if (questions.length === 0) {
+      setError("Adicione ao menos uma pergunta com duas opções.")
+      return
+    }
+
+    const payload: CreateFormPayload = {
+      title: state.title.trim(),
+      opensAt: dateInputToIso(state.opensAt),
+      closesAt: state.closesAt ? dateInputToIso(state.closesAt) : null,
+      questions: questions.map((q) => ({
+        title: q.title,
+        options: q.options.map((title) => ({ title })),
+      })),
+    }
+
+    const onSuccess = () => navigate("/home/empresas/pesquisa-anual")
+    const onError = () =>
+      setError("Não foi possível salvar o formulário. Tente novamente.")
+
+    if (isEdit && formId) {
+      updateForm.mutate({ id: formId, payload }, { onSuccess, onError })
+    } else {
+      createForm.mutate(payload, { onSuccess, onError })
+    }
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Gestão de Currículos de Egressos do IFAL
-        </h1>
-        <p className="text-sm leading-6 text-muted-foreground">
-          Pesquisa do egresso - Edite título, descrição e perguntas.
-        </p>
-      </div>
-
+    <div className="flex flex-col gap-6 pb-24">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -200,246 +205,205 @@ export function EmpresaPesquisaAnualEditarPage() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>{form.titulo}</BreadcrumbPage>
+            <BreadcrumbPage>
+              {isEdit ? "Editar formulário" : "Novo formulário"}
+            </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
 
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex flex-col gap-1">
-              <CardTitle>Configurações do formulário</CardTitle>
-              <CardDescription>
-                Ao ativar este formulário, qualquer outro ativo é desativado automaticamente.
-              </CardDescription>
-            </div>
-            <label className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2 shadow-sm">
-              <span className="text-sm font-medium text-foreground">
-                {form.ativo ? "Formulário ativo" : "Formulário inativo"}
-              </span>
-              <Switch
-                checked={form.ativo}
-                onCheckedChange={handleToggleAtivo}
-                aria-label="Alternar formulário ativo"
-              />
-            </label>
-          </div>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <label htmlFor="form-titulo" className="text-sm font-medium text-foreground">
-              Título
-            </label>
-            <Input
-              id="form-titulo"
-              value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
-              placeholder="Título do formulário"
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <label htmlFor="form-descricao" className="text-sm font-medium text-foreground">
-              Descrição
-            </label>
-            <Textarea
-              id="form-descricao"
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-              rows={3}
-              placeholder="Descrição apresentada ao egresso"
-            />
-          </div>
-        </CardContent>
-        <CardFooter className="justify-between gap-3">
-          <Button
-            variant="outline"
-            onClick={() => navigate("/home/empresas/pesquisa-anual")}
-          >
-            Voltar
-          </Button>
-          <Button onClick={handleSaveMeta} disabled={!metaDirty}>
-            Salvar alterações
-          </Button>
-        </CardFooter>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex flex-col gap-1">
-              <CardTitle>Perguntas</CardTitle>
-              <CardDescription>
-                {form.perguntas.length} pergunta(s) configurada(s).
-              </CardDescription>
-            </div>
-            <Button onClick={openNew}>
-              <PlusIcon aria-hidden="true" />
-              Nova pergunta
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {form.perguntas.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border/80 bg-card/60 p-8 text-center">
-              <p className="text-sm font-medium text-foreground">
-                Nenhuma pergunta cadastrada
-              </p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Clique em "Nova pergunta" para começar a montar o formulário.
-              </p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Pergunta</TableHead>
-                  <TableHead>Opções</TableHead>
-                  <TableHead className="w-32 text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {form.perguntas.map((pergunta) => (
-                  <TableRow key={pergunta.id}>
-                    <TableCell className="max-w-xl whitespace-normal font-medium">
-                      {pergunta.enunciado}
-                    </TableCell>
-                    <TableCell className="max-w-xl whitespace-normal text-muted-foreground">
-                      {pergunta.opcoes.join(" • ")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          title="Editar pergunta"
-                          aria-label="Editar pergunta"
-                          onClick={() => openEdit(pergunta)}
-                        >
-                          <PencilSimpleIcon aria-hidden="true" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                              title="Excluir pergunta"
-                              aria-label="Excluir pergunta"
-                            >
-                              <TrashIcon aria-hidden="true" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Excluir pergunta?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                A pergunta será removida do formulário.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleRemovePergunta(pergunta.id)}
-                              >
-                                Excluir
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "Editar pergunta" : "Nova pergunta"}</DialogTitle>
-            <DialogDescription>
-              Cadastre o enunciado e ao menos duas opções de resposta.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <label htmlFor="dialog-enunciado" className="text-sm font-medium">
-                Enunciado
+      <form id="form-editor" className="flex flex-col gap-6" onSubmit={handleSubmit}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Configurações do formulário</CardTitle>
+            <CardDescription>
+              Defina o título e o período de coleta. Deixe “Fecha em” em branco para
+              não ter data de encerramento.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <div className="flex flex-col gap-2 md:col-span-2">
+              <label htmlFor="form-title" className="text-sm font-medium">
+                Título
               </label>
               <Input
-                id="dialog-enunciado"
-                value={enunciado}
-                onChange={(e) => setEnunciado(e.target.value)}
-                placeholder="Digite o enunciado da pergunta…"
+                id="form-title"
+                value={state.title}
+                onChange={(e) => setState((s) => ({ ...s, title: e.target.value }))}
+                placeholder="Ex.: Pesquisa anual do egresso"
+                required
               />
             </div>
-
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-medium text-foreground">Opções de resposta</p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setOpcoes((current) => [...current, createOpcao()])}
-                >
-                  <PlusIcon aria-hidden="true" />
-                  Adicionar opção
-                </Button>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                {opcoes.map((opcao, index) => (
-                  <div key={opcao.id} className="flex items-center gap-2">
-                    <Input
-                      value={opcao.value}
-                      onChange={(event) =>
-                        setOpcoes((current) =>
-                          current.map((item) =>
-                            item.id === opcao.id
-                              ? { ...item, value: event.target.value }
-                              : item
-                          )
-                        )
-                      }
-                      placeholder={`Opção ${index + 1}`}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={`Remover opção ${index + 1}`}
-                      onClick={() =>
-                        setOpcoes((current) =>
-                          current.length > 2
-                            ? current.filter((item) => item.id !== opcao.id)
-                            : current
-                        )
-                      }
-                    >
-                      <TrashIcon aria-hidden="true" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="form-opens" className="text-sm font-medium">
+                Abre em
+              </label>
+              <Input
+                id="form-opens"
+                type="date"
+                value={state.opensAt}
+                onChange={(e) =>
+                  setState((s) => ({ ...s, opensAt: e.target.value }))
+                }
+                required
+              />
             </div>
-          </div>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="form-closes" className="text-sm font-medium">
+                Fecha em (opcional)
+              </label>
+              <Input
+                id="form-closes"
+                type="date"
+                value={state.closesAt}
+                min={state.opensAt || undefined}
+                onChange={(e) =>
+                  setState((s) => ({ ...s, closesAt: e.target.value }))
+                }
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSavePergunta} disabled={!isDialogValid}>
-              {editingId ? "Salvar alterações" : "Adicionar pergunta"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex flex-col gap-1">
+                <CardTitle>Perguntas</CardTitle>
+                <CardDescription>
+                  Cada pergunta é de múltipla escolha (mínimo duas opções).
+                </CardDescription>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  setState((s) => ({
+                    ...s,
+                    questions: [...s.questions, emptyQuestion()],
+                  }))
+                }
+              >
+                <PlusIcon aria-hidden="true" />
+                Nova pergunta
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-6">
+            {state.questions.map((question, index) => (
+              <div key={question.key} className="flex flex-col gap-4 rounded-lg border p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex flex-1 flex-col gap-2">
+                    <label className="text-sm font-medium">
+                      Pergunta {index + 1}
+                    </label>
+                    <Input
+                      value={question.title}
+                      onChange={(e) =>
+                        updateQuestion(question.key, { title: e.target.value })
+                      }
+                      placeholder="Enunciado da pergunta"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="mt-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    aria-label="Remover pergunta"
+                    onClick={() =>
+                      setState((s) => ({
+                        ...s,
+                        questions:
+                          s.questions.length > 1
+                            ? s.questions.filter((q) => q.key !== question.key)
+                            : s.questions,
+                      }))
+                    }
+                  >
+                    <TrashIcon aria-hidden="true" />
+                  </Button>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Opções
+                  </span>
+                  {question.options.map((option, oIndex) => (
+                    <div key={option.key} className="flex items-center gap-2">
+                      <Input
+                        value={option.title}
+                        onChange={(e) =>
+                          updateOption(question.key, option.key, e.target.value)
+                        }
+                        placeholder={`Opção ${oIndex + 1}`}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Remover opção ${oIndex + 1}`}
+                        onClick={() =>
+                          updateQuestion(question.key, {
+                            options:
+                              question.options.length > 2
+                                ? question.options.filter(
+                                    (o) => o.key !== option.key,
+                                  )
+                                : question.options,
+                          })
+                        }
+                      >
+                        <TrashIcon aria-hidden="true" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="self-start"
+                    onClick={() =>
+                      updateQuestion(question.key, {
+                        options: [...question.options, emptyOption()],
+                      })
+                    }
+                  >
+                    <PlusIcon aria-hidden="true" />
+                    Adicionar opção
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {error ? (
+          <p role="alert" className="text-sm font-medium text-destructive">
+            {error}
+          </p>
+        ) : null}
+      </form>
+
+      <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background p-4">
+        <div className="mx-auto flex max-w-4xl flex-col gap-3 sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate("/home/empresas/pesquisa-anual")}
+            disabled={isPending}
+          >
+            Cancelar
+          </Button>
+          <Button type="submit" form="form-editor" disabled={isPending}>
+            {isPending
+              ? "Salvando…"
+              : isEdit
+                ? "Salvar alterações"
+                : "Criar formulário"}
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }
