@@ -30,7 +30,7 @@ export type PesquisaResposta = {
 }
 
 export type EgressoAtual = {
-  cpf: string
+  email: string
   nome: string
 }
 
@@ -243,11 +243,11 @@ export function addResposta(
   return nova
 }
 
-export function egressoJaRespondeuFormAtivo(cpf: string): boolean {
-  if (!cpf) return false
+export function egressoJaRespondeuFormAtivo(email: string): boolean {
+  if (!email) return false
   const ativo = getActiveForm()
   if (!ativo) return true
-  return getRespostas(ativo.id).some((r) => r.egressoCpf === cpf)
+  return getRespostas(ativo.id).some((r) => r.egressoCpf === email)
 }
 
 export function limparRespostas(formId?: string): void {

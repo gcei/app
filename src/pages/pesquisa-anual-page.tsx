@@ -26,7 +26,7 @@ export function PesquisaAnualPage() {
     if (egresso) {
       addResposta({
         formId: form.id,
-        egressoCpf: egresso.cpf,
+        egressoCpf: egresso.email,
         egressoNome: egresso.nome,
         respostas: answers,
       })
