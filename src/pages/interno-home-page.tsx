@@ -1,0 +1,129 @@
+import { NavLink, Outlet } from "react-router-dom"
+import {
+  ArrowLeftIcon,
+  BuildingsIcon,
+  ClipboardTextIcon,
+  GearIcon,
+  HouseIcon,
+  UsersThreeIcon,
+} from "@phosphor-icons/react"
+
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarSeparator,
+  SidebarTrigger,
+} from "@/components/ui/sidebar"
+
+const internoSections = [
+  {
+    path: "/home/interno/inicio",
+    label: "Início",
+    icon: HouseIcon,
+    end: false,
+  },
+  {
+    path: "/home/interno/empresas-cadastradas",
+    label: "Empresas cadastradas",
+    icon: BuildingsIcon,
+    end: false,
+  },
+  {
+    path: "/home/interno/pesquisa-anual",
+    label: "Pesquisa anual",
+    icon: ClipboardTextIcon,
+    end: false,
+  },
+  {
+    path: "/home/interno/egressos-cadastrados",
+    label: "Egressos cadastrados",
+    icon: UsersThreeIcon,
+    end: false,
+  },
+  {
+    path: "/home/interno/configuracoes",
+    label: "Configurações",
+    icon: GearIcon,
+    end: false,
+  },
+] as const
+
+export function InternoHomePage() {
+  return (
+    <SidebarProvider>
+      <Sidebar collapsible="icon">
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {internoSections.map((section) => {
+                  const Icon = section.icon
+
+                  return (
+                    <SidebarMenuItem key={section.path}>
+                      <NavLink to={section.path} end={section.end}>
+                        {({ isActive }) => (
+                          <SidebarMenuButton tooltip={section.label} isActive={isActive}>
+                            <Icon />
+                            <span>{section.label}</span>
+                          </SidebarMenuButton>
+                        )}
+                      </NavLink>
+                    </SidebarMenuItem>
+                  )
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+
+        <SidebarMenuItem className="mb-3">
+          <NavLink to="/login">
+            <SidebarMenuButton className="text-destructive">
+              <ArrowLeftIcon />
+              <span>Sair</span>
+            </SidebarMenuButton>
+          </NavLink>
+        </SidebarMenuItem>
+
+        <SidebarSeparator />
+
+        <SidebarFooter>
+          <div className="flex flex-row items-center gap-4">
+            <Avatar>
+              <AvatarFallback className="bg-primary text-white">IN</AvatarFallback>
+            </Avatar>
+            <div className="data-[collapsible=icon]:hidden">
+              <p className="text-sm font-medium">Acesso interno</p>
+              <p className="text-xs text-muted-foreground">interno@ifal.edu.br</p>
+            </div>
+          </div>
+        </SidebarFooter>
+      </Sidebar>
+
+      <SidebarInset>
+        <header className="flex items-center gap-3 p-6">
+          <SidebarTrigger />
+          <img
+            src="/logo_ifal.png"
+            alt="Instituto Federal de Alagoas"
+            className="ml-auto h-14 w-auto"
+          />
+        </header>
+
+        <main className="flex flex-1 flex-col gap-6 px-6 pb-6">
+          <Outlet />
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
+  )
+}
