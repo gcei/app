@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { NavLink, useNavigate, useParams } from "react-router-dom"
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react"
 
@@ -19,764 +19,642 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { curriculosMockados } from "@/mocks/egresso-curriculos"
-import { saveCurriculum, updateCurriculum } from "@/lib/curriculo-storage"
+import {
+  useResume,
+  useSaveResume,
+  type ResumeFormPayload,
+  type SaveResumeInput,
+} from "@/hooks/api/use-resumes"
+import type { Resume } from "@/lib/api/types"
 
-type ExperienciaFormItem = {
-  id: string
-  cargo: string
-  organizacao: string
-  periodo: string
+interface ExperienceRow {
+  key: string
+  id?: string
+  role: string
+  company: string
+  from: string
+  until: string
+}
+interface LanguageRow {
+  key: string
+  id?: string
+  title: string
+  level: string
+}
+interface AbilityRow {
+  key: string
+  id?: string
+  title: string
+}
+interface CourseRow {
+  key: string
+  id?: string
+  title: string
+  from: string
+  until: string
+}
+interface ResumeFormState {
+  title: string
+  coverLetter: string
+  public: boolean
+  experiences: ExperienceRow[]
+  languages: LanguageRow[]
+  abilities: AbilityRow[]
+  courses: CourseRow[]
 }
 
-type HabilidadeFormItem = {
-  id: string
-  nome: string
-}
+const newKey = () => crypto.randomUUID()
+const emptyExperience = (): ExperienceRow => ({
+  key: newKey(),
+  role: "",
+  company: "",
+  from: "",
+  until: "",
+})
+const emptyLanguage = (): LanguageRow => ({ key: newKey(), title: "", level: "" })
+const emptyAbility = (): AbilityRow => ({ key: newKey(), title: "" })
+const emptyCourse = (): CourseRow => ({
+  key: newKey(),
+  title: "",
+  from: "",
+  until: "",
+})
 
-type IdiomaFormItem = {
-  id: string
-  idioma: string
-  nivel: string
-}
+const emptyForm = (): ResumeFormState => ({
+  title: "",
+  coverLetter: "",
+  public: false,
+  experiences: [],
+  languages: [],
+  abilities: [],
+  courses: [],
+})
 
-type FormacaoFormItem = {
-  id: string
-  curso: string
-  instituicao: string
-  situacao: string
-}
+/** ISO → valor do `<input type="date">` (YYYY-MM-DD). */
+const isoToDateInput = (iso: string) => (iso ? iso.slice(0, 10) : "")
+/** Valor do `<input type="date">` → ISO 8601 (meia-noite UTC). */
+const dateInputToIso = (date: string) => `${date}T00:00:00.000Z`
 
-type CurriculoFormState = {
-  titulo: string
-  nomeCompleto: string
-  email: string
-  telefone: string
-  cidade: string
-  objetivo: string
-  habilidades: HabilidadeFormItem[]
-  idiomas: IdiomaFormItem[]
-  experiencias: ExperienciaFormItem[]
-  formacoes: FormacaoFormItem[]
-}
-
-const createHabilidade = (): HabilidadeFormItem => {
+function mapResumeToForm(resume: Resume): ResumeFormState {
   return {
-    id: crypto.randomUUID(),
-    nome: "",
+    title: resume.title,
+    coverLetter: resume.coverLetter ?? "",
+    public: resume.public,
+    experiences: resume.experiences.map((e) => ({
+      key: newKey(),
+      id: e.id,
+      role: e.role,
+      company: e.company,
+      from: isoToDateInput(e.from),
+      until: isoToDateInput(e.until),
+    })),
+    languages: resume.languages.map((l) => ({
+      key: newKey(),
+      id: l.id,
+      title: l.title,
+      level: l.level,
+    })),
+    abilities: resume.abilities.map((a) => ({
+      key: newKey(),
+      id: a.id,
+      title: a.title,
+    })),
+    courses: resume.courses.map((c) => ({
+      key: newKey(),
+      id: c.id,
+      title: c.title,
+      from: isoToDateInput(c.from),
+      until: isoToDateInput(c.until),
+    })),
   }
 }
 
-const createIdioma = (): IdiomaFormItem => {
-  return {
-    id: crypto.randomUUID(),
-    idioma: "",
-    nivel: "",
-  }
-}
-
-const createExperiencia = (): ExperienciaFormItem => {
-  return {
-    id: crypto.randomUUID(),
-    cargo: "",
-    organizacao: "",
-    periodo: "",
-  }
-}
-
-const createFormacao = (): FormacaoFormItem => {
-  return {
-    id: crypto.randomUUID(),
-    curso: "Curso técnico do egresso",
-    instituicao: "IFAL",
-    situacao: "Concluído",
-  }
-}
-
-const initialState: CurriculoFormState = {
-  titulo: "",
-  nomeCompleto: "",
-  email: "",
-  telefone: "",
-  cidade: "",
-  objetivo: "",
-  habilidades: [createHabilidade()],
-  idiomas: [createIdioma()],
-  experiencias: [createExperiencia()],
-  formacoes: [createFormacao()],
+function updateList<T extends { key: string }>(
+  list: T[],
+  key: string,
+  patch: Partial<T>,
+): T[] {
+  return list.map((item) => (item.key === key ? { ...item, ...patch } : item))
 }
 
 export function EgressoCurriculoGerarPage() {
-  const navigate = useNavigate()
   const { curriculoId } = useParams()
-  const [isEditMode, setIsEditMode] = useState(false)
-  const [formState, setFormState] = useState<CurriculoFormState>(initialState)
+  if (!curriculoId) {
+    return <ResumeFormScreen mode="create" initial={emptyForm()} />
+  }
+  return <EditResumeLoader id={curriculoId} />
+}
 
-  useEffect(() => {
-    if (curriculoId) {
-      setIsEditMode(true)
-      const curriculum = curriculosMockados.find(c => c.id === curriculoId)
-      if (curriculum) {
-        setFormState({
-          titulo: curriculum.nome,
-          nomeCompleto: curriculum.nomeCompleto,
-          email: curriculum.email,
-          telefone: curriculum.telefone,
-          cidade: curriculum.cidade,
-          objetivo: curriculum.objetivo,
-          habilidades: curriculum.habilidades.map(h => ({ id: crypto.randomUUID(), nome: h })),
-          idiomas: curriculum.idiomas.map(i => {
-            const [idioma, nivel] = i.split(' - ')
-            return { id: crypto.randomUUID(), idioma, nivel }
-          }),
-          experiencias: curriculum.experiencias.map(e => ({ 
-            id: crypto.randomUUID(), 
-            cargo: "", 
-            organizacao: "", 
-            periodo: "" 
-          })),
-          formacoes: curriculum.formacao.map(f => {
-            const parts = f.split(' - ')
-            return { 
-              id: crypto.randomUUID(), 
-              curso: parts[0] || "", 
-              instituicao: parts[1] || "", 
-              situacao: parts[2] || "" 
-            }
-          })
-        })
-      }
+function EditResumeLoader({ id }: { id: string }) {
+  const { data: resume, isLoading, isError, refetch } = useResume(id)
+
+  if (isLoading) {
+    return (
+      <p className="py-10 text-center text-sm text-muted-foreground">
+        Carregando currículo…
+      </p>
+    )
+  }
+  if (isError || !resume) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-10">
+        <p className="text-sm text-destructive">
+          Não foi possível carregar o currículo.
+        </p>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          Tentar novamente
+        </Button>
+      </div>
+    )
+  }
+  return (
+    <ResumeFormScreen
+      key={resume.id}
+      mode="edit"
+      resumeId={resume.id}
+      original={resume}
+      initial={mapResumeToForm(resume)}
+    />
+  )
+}
+
+interface ResumeFormScreenProps {
+  mode: "create" | "edit"
+  initial: ResumeFormState
+  resumeId?: string
+  original?: Resume
+}
+
+function ResumeFormScreen({
+  mode,
+  initial,
+  resumeId,
+  original,
+}: ResumeFormScreenProps) {
+  const navigate = useNavigate()
+  const save = useSaveResume()
+  const [form, setForm] = useState<ResumeFormState>(initial)
+  const [error, setError] = useState<string | null>(null)
+  const isEditMode = mode === "edit"
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setError(null)
+
+    if (!form.title.trim()) {
+      setError("Informe um título para o currículo.")
+      return
     }
-  }, [curriculoId])
 
-  const updateExperiencia = (
-    itemId: string,
-    field: keyof Omit<ExperienciaFormItem, "id">,
-    value: string
-  ) => {
-    setFormState((current) => ({
-      ...current,
-      experiencias: current.experiencias.map((item) =>
-        item.id === itemId ? { ...item, [field]: value } : item
-      ),
-    }))
-  }
+    const payload: ResumeFormPayload = {
+      title: form.title.trim(),
+      coverLetter: form.coverLetter.trim() || null,
+      public: form.public,
+      experiences: form.experiences
+        .filter((e) => e.role.trim() && e.company.trim() && e.from && e.until)
+        .map((e) => ({
+          id: e.id,
+          role: e.role.trim(),
+          company: e.company.trim(),
+          from: dateInputToIso(e.from),
+          until: dateInputToIso(e.until),
+        })),
+      languages: form.languages
+        .filter((l) => l.title.trim() && l.level.trim())
+        .map((l) => ({ id: l.id, title: l.title.trim(), level: l.level.trim() })),
+      abilities: form.abilities
+        .filter((a) => a.title.trim())
+        .map((a) => ({ id: a.id, title: a.title.trim() })),
+      courses: form.courses
+        .filter((c) => c.title.trim() && c.from && c.until)
+        .map((c) => ({
+          id: c.id,
+          title: c.title.trim(),
+          from: dateInputToIso(c.from),
+          until: dateInputToIso(c.until),
+        })),
+    }
 
-  const updateFormacao = (
-    itemId: string,
-    field: keyof Omit<FormacaoFormItem, "id">,
-    value: string
-  ) => {
-    setFormState((current) => ({
-      ...current,
-      formacoes: current.formacoes.map((item) =>
-        item.id === itemId ? { ...item, [field]: value } : item
-      ),
-    }))
-  }
+    const input: SaveResumeInput =
+      isEditMode && resumeId && original
+        ? { mode: "edit", id: resumeId, payload, original }
+        : { mode: "create", payload }
 
-  const updateHabilidade = (itemId: string, value: string) => {
-    setFormState((current) => ({
-      ...current,
-      habilidades: current.habilidades.map((item) =>
-        item.id === itemId ? { ...item, nome: value } : item
-      ),
-    }))
-  }
-
-  const updateIdioma = (
-    itemId: string,
-    field: keyof Omit<IdiomaFormItem, "id">,
-    value: string
-  ) => {
-    setFormState((current) => ({
-      ...current,
-      idiomas: current.idiomas.map((item) =>
-        item.id === itemId ? { ...item, [field]: value } : item
-      ),
-    }))
+    save.mutate(input, {
+      onSuccess: () => navigate("/home/egresso/curriculo"),
+      onError: () =>
+        setError("Não foi possível salvar o currículo. Tente novamente."),
+    })
   }
 
   return (
-    <div className="flex flex-col gap-6 pb-20">
-      <div className="flex flex-col gap-3">
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <NavLink to="/home/egresso/curriculo">Currículo</NavLink>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{isEditMode ? "Editar currículo" : "Gerar currículo"}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      </div>
+    <div className="flex flex-col gap-6 pb-24">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <NavLink to="/home/egresso/curriculo">Currículo</NavLink>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>
+              {isEditMode ? "Editar currículo" : "Gerar currículo"}
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
       <Card>
         <CardHeader>
-          <CardTitle>{isEditMode ? "Editar dados do currículo" : "Dados do currículo"}</CardTitle>
+          <CardTitle>
+            {isEditMode ? "Editar dados do currículo" : "Dados do currículo"}
+          </CardTitle>
           <CardDescription>
-            {isEditMode 
-              ? "Atualize as informações do seu currículo."
-              : "Informações básicas para criação de uma nova versão."
-            }
+            Os dados de contato (nome, e-mail, telefone e cidade) vêm do seu
+            perfil e aparecem automaticamente no PDF.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form
+            id="resume-form"
             className="flex flex-col gap-6"
-            onSubmit={(event) => {
-              event.preventDefault()
-              
-              const curriculumData = {
-                nome: formState.titulo,
-                nomeCompleto: formState.nomeCompleto,
-                email: formState.email,
-                telefone: formState.telefone,
-                cidade: formState.cidade,
-                objetivo: formState.objetivo,
-                habilidades: formState.habilidades.map(h => h.nome),
-                idiomas: formState.idiomas.map(i => `${i.idioma} - ${i.nivel}`),
-                experiencias: formState.experiencias.map(e => `${e.cargo} - ${e.organizacao} - ${e.periodo}`),
-                formacao: formState.formacoes.map(f => `${f.curso} - ${f.instituicao} - ${f.situacao}`)
-              }
-              
-              if (isEditMode && curriculoId) {
-                updateCurriculum(curriculoId, curriculumData)
-              } else {
-                saveCurriculum(curriculumData)
-              }
-              
-              navigate("/home/egresso/curriculo")
-            }}
+            onSubmit={handleSubmit}
           >
             <div className="grid gap-4 md:grid-cols-2">
               <div className="flex flex-col gap-2">
-                <label htmlFor="curriculo-titulo" className="text-sm font-medium">
+                <label htmlFor="resume-title" className="text-sm font-medium">
                   Título da versão
                 </label>
                 <Input
-                  id="curriculo-titulo"
-                  name="titulo"
+                  id="resume-title"
                   autoComplete="off"
-                  value={formState.titulo}
+                  value={form.title}
                   onChange={(event) =>
-                    setFormState((current) => ({
-                      ...current,
-                      titulo: event.target.value,
-                    }))
+                    setForm((f) => ({ ...f, title: event.target.value }))
                   }
                   placeholder="Ex.: Currículo - Desenvolvimento Web"
+                  required
                 />
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label htmlFor="nome-completo" className="text-sm font-medium">
-                  Nome completo
-                </label>
-                <Input
-                  id="nome-completo"
-                  name="nome_completo"
-                  autoComplete="name"
-                  value={formState.nomeCompleto}
-                  onChange={(event) =>
-                    setFormState((current) => ({
-                      ...current,
-                      nomeCompleto: event.target.value,
-                    }))
+              <div className="flex items-end gap-3">
+                <Switch
+                  id="resume-public"
+                  checked={form.public}
+                  onCheckedChange={(checked) =>
+                    setForm((f) => ({ ...f, public: checked }))
                   }
-                  placeholder="Digite seu nome completo"
                 />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label htmlFor="email-curriculo" className="text-sm font-medium">
-                  E-mail
+                <label htmlFor="resume-public" className="text-sm font-medium">
+                  Currículo público (visível para empresas)
                 </label>
-                <Input
-                  id="email-curriculo"
-                  type="email"
-                  name="email"
-                  autoComplete="email"
-                  spellCheck={false}
-                  value={formState.email}
-                  onChange={(event) =>
-                    setFormState((current) => ({
-                      ...current,
-                      email: event.target.value,
-                    }))
-                  }
-                  placeholder="Digite seu e-mail"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label htmlFor="telefone-curriculo" className="text-sm font-medium">
-                  Telefone
-                </label>
-                <Input
-                  id="telefone-curriculo"
-                  name="telefone"
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  value={formState.telefone}
-                  onChange={(event) =>
-                    setFormState((current) => ({
-                      ...current,
-                      telefone: event.target.value,
-                    }))
-                  }
-                  placeholder="Digite seu telefone"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2 md:col-span-2">
-                <label htmlFor="cidade-curriculo" className="text-sm font-medium">
-                  Cidade
-                </label>
-                <Input
-                  id="cidade-curriculo"
-                  name="cidade"
-                  autoComplete="address-level2"
-                  value={formState.cidade}
-                  onChange={(event) =>
-                    setFormState((current) => ({
-                      ...current,
-                      cidade: event.target.value,
-                    }))
-                  }
-                  placeholder="Informe sua cidade"
-                />
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <label htmlFor="objetivo-curriculo" className="text-sm font-medium">
-                Objetivo profissional
+              <label htmlFor="resume-cover" className="text-sm font-medium">
+                Objetivo / carta de apresentação
               </label>
               <Textarea
-                id="objetivo-curriculo"
-                name="objetivo"
-                value={formState.objetivo}
+                id="resume-cover"
+                value={form.coverLetter}
                 onChange={(event) =>
-                  setFormState((current) => ({
-                    ...current,
-                    objetivo: event.target.value,
-                  }))
+                  setForm((f) => ({ ...f, coverLetter: event.target.value }))
                 }
-                placeholder="Descreva seu objetivo profissional"
+                placeholder="Descreva seu objetivo profissional ou uma breve apresentação"
                 className="min-h-24"
               />
             </div>
 
-            <section className="flex flex-col gap-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex flex-col gap-1">
-                  <h2 className="text-base font-medium text-foreground">Habilidades</h2>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() =>
-                    setFormState((current) => ({
-                      ...current,
-                      habilidades: [...current.habilidades, createHabilidade()],
-                    }))
-                  }
+            <FormSection
+              title="Experiências"
+              addLabel="Adicionar experiência"
+              onAdd={() =>
+                setForm((f) => ({
+                  ...f,
+                  experiences: [...f.experiences, emptyExperience()],
+                }))
+              }
+            >
+              {form.experiences.map((item) => (
+                <div
+                  key={item.key}
+                  className="grid gap-4 rounded-lg border p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_10rem_10rem_auto]"
                 >
-                  <PlusIcon aria-hidden="true" />
-                  Adicionar habilidade
-                </Button>
-              </div>
-
-              <div className="flex flex-col gap-4">
-                {formState.habilidades.map((habilidade, index) => (
-                  <div
-                    key={habilidade.id}
-                    className="grid gap-4 rounded-lg border p-4 lg:grid-cols-[minmax(0,1fr)_auto]"
-                  >
-                    <div className="flex flex-col gap-2">
-                      <label
-                        htmlFor={`habilidade-nome-${habilidade.id}`}
-                        className="text-sm font-medium"
-                      >
-                        Habilidade
-                      </label>
-                      <Input
-                        id={`habilidade-nome-${habilidade.id}`}
-                        name={`habilidade_nome_${index}`}
-                        autoComplete="off"
-                        value={habilidade.nome}
-                        onChange={(event) =>
-                          updateHabilidade(habilidade.id, event.target.value)
-                        }
-                        placeholder="Ex.: React e TypeScript…"
-                      />
-                    </div>
-
-                    <div className="flex items-end justify-end">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() =>
-                          setFormState((current) => ({
-                            ...current,
-                            habilidades:
-                              current.habilidades.length > 1
-                                ? current.habilidades.filter(
-                                    (item) => item.id !== habilidade.id
-                                  )
-                                : current.habilidades,
-                          }))
-                        }
-                      >
-                        <TrashIcon aria-hidden="true" />
-                        Remover
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="flex flex-col gap-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex flex-col gap-1">
-                  <h2 className="text-base font-medium text-foreground">Idiomas</h2>
+                  <Field label="Cargo">
+                    <Input
+                      value={item.role}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          experiences: updateList(f.experiences, item.key, {
+                            role: e.target.value,
+                          }),
+                        }))
+                      }
+                      placeholder="Ex.: Estagiário de desenvolvimento"
+                    />
+                  </Field>
+                  <Field label="Empresa">
+                    <Input
+                      value={item.company}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          experiences: updateList(f.experiences, item.key, {
+                            company: e.target.value,
+                          }),
+                        }))
+                      }
+                      placeholder="Ex.: Acme Inc."
+                    />
+                  </Field>
+                  <Field label="Início">
+                    <Input
+                      type="date"
+                      value={item.from}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          experiences: updateList(f.experiences, item.key, {
+                            from: e.target.value,
+                          }),
+                        }))
+                      }
+                    />
+                  </Field>
+                  <Field label="Fim">
+                    <Input
+                      type="date"
+                      value={item.until}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          experiences: updateList(f.experiences, item.key, {
+                            until: e.target.value,
+                          }),
+                        }))
+                      }
+                    />
+                  </Field>
+                  <RemoveButton
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        experiences: f.experiences.filter(
+                          (i) => i.key !== item.key,
+                        ),
+                      }))
+                    }
+                  />
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() =>
-                    setFormState((current) => ({
-                      ...current,
-                      idiomas: [...current.idiomas, createIdioma()],
-                    }))
-                  }
+              ))}
+            </FormSection>
+
+            <FormSection
+              title="Idiomas"
+              addLabel="Adicionar idioma"
+              onAdd={() =>
+                setForm((f) => ({
+                  ...f,
+                  languages: [...f.languages, emptyLanguage()],
+                }))
+              }
+            >
+              {form.languages.map((item) => (
+                <div
+                  key={item.key}
+                  className="grid gap-4 rounded-lg border p-4 lg:grid-cols-[minmax(0,1fr)_14rem_auto]"
                 >
-                  <PlusIcon aria-hidden="true" />
-                  Adicionar idioma
-                </Button>
-              </div>
-
-              <div className="flex flex-col gap-4">
-                {formState.idiomas.map((idioma, index) => (
-                  <div
-                    key={idioma.id}
-                    className="grid gap-4 rounded-lg border p-4 lg:grid-cols-[minmax(0,1fr)_14rem_auto]"
-                  >
-                    <div className="flex flex-col gap-2">
-                      <label
-                        htmlFor={`idioma-nome-${idioma.id}`}
-                        className="text-sm font-medium"
-                      >
-                        Idioma
-                      </label>
-                      <Input
-                        id={`idioma-nome-${idioma.id}`}
-                        name={`idioma_nome_${index}`}
-                        autoComplete="off"
-                        value={idioma.idioma}
-                        onChange={(event) =>
-                          updateIdioma(idioma.id, "idioma", event.target.value)
-                        }
-                        placeholder="Ex.: Inglês…"
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <label
-                        htmlFor={`idioma-nivel-${idioma.id}`}
-                        className="text-sm font-medium"
-                      >
-                        Nível
-                      </label>
-                      <Input
-                        id={`idioma-nivel-${idioma.id}`}
-                        name={`idioma_nivel_${index}`}
-                        autoComplete="off"
-                        value={idioma.nivel}
-                        onChange={(event) =>
-                          updateIdioma(idioma.id, "nivel", event.target.value)
-                        }
-                        placeholder="Ex.: Intermediário…"
-                      />
-                    </div>
-
-                    <div className="flex items-end justify-end">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() =>
-                          setFormState((current) => ({
-                            ...current,
-                            idiomas:
-                              current.idiomas.length > 1
-                                ? current.idiomas.filter(
-                                    (item) => item.id !== idioma.id
-                                  )
-                                : current.idiomas,
-                          }))
-                        }
-                      >
-                        <TrashIcon aria-hidden="true" />
-                        Remover
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="flex flex-col gap-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex flex-col gap-1">
-                  <h2 className="text-base font-medium text-foreground">Experiências</h2>
+                  <Field label="Idioma">
+                    <Input
+                      value={item.title}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          languages: updateList(f.languages, item.key, {
+                            title: e.target.value,
+                          }),
+                        }))
+                      }
+                      placeholder="Ex.: Inglês"
+                    />
+                  </Field>
+                  <Field label="Nível">
+                    <Input
+                      value={item.level}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          languages: updateList(f.languages, item.key, {
+                            level: e.target.value,
+                          }),
+                        }))
+                      }
+                      placeholder="Ex.: Intermediário"
+                    />
+                  </Field>
+                  <RemoveButton
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        languages: f.languages.filter((i) => i.key !== item.key),
+                      }))
+                    }
+                  />
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() =>
-                    setFormState((current) => ({
-                      ...current,
-                      experiencias: [...current.experiencias, createExperiencia()],
-                    }))
-                  }
+              ))}
+            </FormSection>
+
+            <FormSection
+              title="Habilidades"
+              addLabel="Adicionar habilidade"
+              onAdd={() =>
+                setForm((f) => ({
+                  ...f,
+                  abilities: [...f.abilities, emptyAbility()],
+                }))
+              }
+            >
+              {form.abilities.map((item) => (
+                <div
+                  key={item.key}
+                  className="grid gap-4 rounded-lg border p-4 lg:grid-cols-[minmax(0,1fr)_auto]"
                 >
-                  <PlusIcon aria-hidden="true" />
-                  Adicionar experiência
-                </Button>
-              </div>
-
-              <div className="flex flex-col gap-4">
-                {formState.experiencias.map((experiencia, index) => (
-                  <div
-                    key={experiencia.id}
-                    className="grid gap-4 rounded-lg border p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_12rem_auto]"
-                  >
-                    <div className="flex flex-col gap-2">
-                      <label
-                        htmlFor={`experiencia-cargo-${experiencia.id}`}
-                        className="text-sm font-medium"
-                      >
-                        Cargo
-                      </label>
-                      <Input
-                        id={`experiencia-cargo-${experiencia.id}`}
-                        name={`experiencia_cargo_${index}`}
-                        autoComplete="off"
-                        value={experiencia.cargo}
-                        onChange={(event) =>
-                          updateExperiencia(experiencia.id, "cargo", event.target.value)
-                        }
-                        placeholder="Ex.: Estagiário de desenvolvimento…"
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <label
-                        htmlFor={`experiencia-organizacao-${experiencia.id}`}
-                        className="text-sm font-medium"
-                      >
-                        Empresa ou projeto
-                      </label>
-                      <Input
-                        id={`experiencia-organizacao-${experiencia.id}`}
-                        name={`experiencia_organizacao_${index}`}
-                        autoComplete="off"
-                        value={experiencia.organizacao}
-                        onChange={(event) =>
-                          updateExperiencia(
-                            experiencia.id,
-                            "organizacao",
-                            event.target.value
-                          )
-                        }
-                        placeholder="Ex.: Projeto integrador…"
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <label
-                        htmlFor={`experiencia-periodo-${experiencia.id}`}
-                        className="text-sm font-medium"
-                      >
-                        Período
-                      </label>
-                      <Input
-                        id={`experiencia-periodo-${experiencia.id}`}
-                        name={`experiencia_periodo_${index}`}
-                        autoComplete="off"
-                        value={experiencia.periodo}
-                        onChange={(event) =>
-                          updateExperiencia(experiencia.id, "periodo", event.target.value)
-                        }
-                        placeholder="Ex.: 2025 - 2026…"
-                      />
-                    </div>
-
-                    <div className="flex items-end justify-end">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() =>
-                          setFormState((current) => ({
-                            ...current,
-                            experiencias:
-                              current.experiencias.length > 1
-                                ? current.experiencias.filter(
-                                    (item) => item.id !== experiencia.id
-                                  )
-                                : current.experiencias,
-                          }))
-                        }
-                      >
-                        <TrashIcon aria-hidden="true" />
-                        Remover
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="flex flex-col gap-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex flex-col gap-1">
-                  <h2 className="text-base font-medium text-foreground">Formação</h2>
+                  <Field label="Habilidade">
+                    <Input
+                      value={item.title}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          abilities: updateList(f.abilities, item.key, {
+                            title: e.target.value,
+                          }),
+                        }))
+                      }
+                      placeholder="Ex.: Liderança, React e TypeScript…"
+                    />
+                  </Field>
+                  <RemoveButton
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        abilities: f.abilities.filter((i) => i.key !== item.key),
+                      }))
+                    }
+                  />
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() =>
-                    setFormState((current) => ({
-                      ...current,
-                      formacoes: [...current.formacoes, createFormacao()],
-                    }))
-                  }
+              ))}
+            </FormSection>
+
+            <FormSection
+              title="Formação"
+              addLabel="Adicionar formação"
+              onAdd={() =>
+                setForm((f) => ({ ...f, courses: [...f.courses, emptyCourse()] }))
+              }
+            >
+              {form.courses.map((item) => (
+                <div
+                  key={item.key}
+                  className="grid gap-4 rounded-lg border p-4 lg:grid-cols-[minmax(0,1fr)_10rem_10rem_auto]"
                 >
-                  <PlusIcon aria-hidden="true" />
-                  Adicionar formação
-                </Button>
-              </div>
+                  <Field label="Curso">
+                    <Input
+                      value={item.title}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          courses: updateList(f.courses, item.key, {
+                            title: e.target.value,
+                          }),
+                        }))
+                      }
+                      placeholder="Ex.: Sistemas de Informação - IFAL"
+                    />
+                  </Field>
+                  <Field label="Início">
+                    <Input
+                      type="date"
+                      value={item.from}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          courses: updateList(f.courses, item.key, {
+                            from: e.target.value,
+                          }),
+                        }))
+                      }
+                    />
+                  </Field>
+                  <Field label="Fim">
+                    <Input
+                      type="date"
+                      value={item.until}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          courses: updateList(f.courses, item.key, {
+                            until: e.target.value,
+                          }),
+                        }))
+                      }
+                    />
+                  </Field>
+                  <RemoveButton
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        courses: f.courses.filter((i) => i.key !== item.key),
+                      }))
+                    }
+                  />
+                </div>
+              ))}
+            </FormSection>
 
-              <div className="flex flex-col gap-4">
-                {formState.formacoes.map((formacao, index) => (
-                  <div
-                    key={formacao.id}
-                    className="grid gap-4 rounded-lg border p-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_12rem_auto]"
-                  >
-                    <div className="flex flex-col gap-2">
-                      <label
-                        htmlFor={`formacao-curso-${formacao.id}`}
-                        className="text-sm font-medium"
-                      >
-                        Curso
-                      </label>
-                      <Input
-                        id={`formacao-curso-${formacao.id}`}
-                        name={`formacao_curso_${index}`}
-                        autoComplete="off"
-                        value={formacao.curso}
-                        onChange={(event) =>
-                          updateFormacao(formacao.id, "curso", event.target.value)
-                        }
-                        placeholder="Ex.: Técnico em Informática…"
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <label
-                        htmlFor={`formacao-instituicao-${formacao.id}`}
-                        className="text-sm font-medium"
-                      >
-                        Instituição
-                      </label>
-                      <Input
-                        id={`formacao-instituicao-${formacao.id}`}
-                        name={`formacao_instituicao_${index}`}
-                        autoComplete="organization"
-                        value={formacao.instituicao}
-                        onChange={(event) =>
-                          updateFormacao(formacao.id, "instituicao", event.target.value)
-                        }
-                        placeholder="Ex.: IFAL…"
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <label
-                        htmlFor={`formacao-situacao-${formacao.id}`}
-                        className="text-sm font-medium"
-                      >
-                        Situação
-                      </label>
-                      <Input
-                        id={`formacao-situacao-${formacao.id}`}
-                        name={`formacao_situacao_${index}`}
-                        autoComplete="off"
-                        value={formacao.situacao}
-                        onChange={(event) =>
-                          updateFormacao(formacao.id, "situacao", event.target.value)
-                        }
-                        placeholder="Ex.: Concluído…"
-                      />
-                    </div>
-
-                    <div className="flex items-end justify-end">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() =>
-                          setFormState((current) => ({
-                            ...current,
-                            formacoes:
-                              current.formacoes.length > 1
-                                ? current.formacoes.filter(
-                                    (item) => item.id !== formacao.id
-                                  )
-                                : current.formacoes,
-                          }))
-                        }
-                      >
-                        <TrashIcon aria-hidden="true" />
-                        Remover
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
+            {error ? (
+              <p role="alert" className="text-sm font-medium text-destructive">
+                {error}
+              </p>
+            ) : null}
           </form>
         </CardContent>
       </Card>
 
-      {/* Sticky buttons at bottom */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4 z-50">
-        <div className="max-w-4xl mx-auto flex flex-col gap-3 sm:flex-row sm:justify-end">
+      <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background p-4">
+        <div className="mx-auto flex max-w-4xl flex-col gap-3 sm:flex-row sm:justify-end">
           <Button
             type="button"
             variant="outline"
             onClick={() => navigate("/home/egresso/curriculo")}
+            disabled={save.isPending}
           >
             Cancelar
           </Button>
-          <Button 
-            type="submit"
-            onClick={() => {
-              const form = document.querySelector('form') as HTMLFormElement
-              form?.requestSubmit()
-            }}
-          >
-            {isEditMode ? "Atualizar currículo" : "Salvar currículo"}
+          <Button type="submit" form="resume-form" disabled={save.isPending}>
+            {save.isPending
+              ? "Salvando…"
+              : isEditMode
+                ? "Atualizar currículo"
+                : "Salvar currículo"}
           </Button>
         </div>
       </div>
+    </div>
+  )
+}
+
+function FormSection({
+  title,
+  addLabel,
+  onAdd,
+  children,
+}: {
+  title: string
+  addLabel: string
+  onAdd: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <section className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-base font-medium text-foreground">{title}</h2>
+        <Button type="button" variant="outline" onClick={onAdd}>
+          <PlusIcon aria-hidden="true" />
+          {addLabel}
+        </Button>
+      </div>
+      <div className="flex flex-col gap-4">{children}</div>
+    </section>
+  )
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="text-sm font-medium">{label}</label>
+      {children}
+    </div>
+  )
+}
+
+function RemoveButton({ onClick }: { onClick: () => void }) {
+  return (
+    <div className="flex items-end justify-end">
+      <Button type="button" variant="ghost" onClick={onClick}>
+        <TrashIcon aria-hidden="true" />
+        Remover
+      </Button>
     </div>
   )
 }

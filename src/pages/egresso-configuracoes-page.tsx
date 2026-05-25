@@ -12,15 +12,32 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { useUser } from "@/contexts/UserContext"
+import { useAuth } from "@/contexts/AuthContext"
+import { useUpdateUser } from "@/hooks/api/use-users"
 
+function getInitials(nome: string) {
+  return (
+    nome
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((parte) => parte[0]?.toUpperCase() ?? "")
+      .join("") || "?"
+  )
+}
 
 export function EgressoConfiguracoesPage() {
+  const { user } = useAuth()
+  const updateUser = useUpdateUser()
   const inputFotoRef = useRef<HTMLInputElement>(null)
-  const { userData, updateUserData } = useUser()
   const [fotoPreview, setFotoPreview] = useState<string | null>(null)
-  const [mensagemPerfil, setMensagemPerfil] = useState("")
-  const [formState, setFormState] = useState({ nome: userData.nome, email: userData.email })
+  const [mensagem, setMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(
+    null,
+  )
+  const [formState, setFormState] = useState({
+    nome: user?.name ?? "",
+    email: user?.email ?? "",
+  })
 
   useEffect(() => {
     return () => {
@@ -29,6 +46,27 @@ export function EgressoConfiguracoesPage() {
       }
     }
   }, [fotoPreview])
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!user) return
+    setMensagem(null)
+    updateUser.mutate(
+      {
+        id: user.id,
+        payload: { name: formState.nome.trim(), email: formState.email.trim() },
+      },
+      {
+        onSuccess: () =>
+          setMensagem({ tipo: "ok", texto: "Dados do perfil atualizados." }),
+        onError: () =>
+          setMensagem({
+            tipo: "erro",
+            texto: "Não foi possível atualizar o perfil. Tente novamente.",
+          }),
+      },
+    )
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -44,33 +82,26 @@ export function EgressoConfiguracoesPage() {
         <CardHeader>
           <CardTitle>Dados do perfil</CardTitle>
           <CardDescription>
-            Atualize sua foto, nome e e-mail exibidos na plataforma.
+            Atualize seu nome e e-mail exibidos na plataforma.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form
-            id="perfil-form"
-            className="flex flex-col gap-6"
-            onSubmit={(event) => {
-              event.preventDefault()
-              updateUserData({ nome: formState.nome, email: formState.email })
-              setMensagemPerfil("Dados do perfil atualizados.")
-            }}
-          >
+          <form id="perfil-form" className="flex flex-col gap-6" onSubmit={handleSubmit}>
             <div className="flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
                 <Avatar size="lg" className="size-20">
                   {fotoPreview ? (
-                    <AvatarImage src={fotoPreview} alt="Foto do perfil do egresso" />
+                    <AvatarImage src={fotoPreview} alt="Foto do perfil" />
                   ) : null}
                   <AvatarFallback className="bg-primary text-base text-primary-foreground">
-                    NE
+                    {getInitials(formState.nome)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col gap-1">
                   <p className="text-sm font-medium text-foreground">Foto do perfil</p>
                   <p className="text-sm text-muted-foreground">
-                    Escolha uma imagem para representar seu perfil.
+                    A pré-visualização é local (o envio de foto ainda não é suportado
+                    pela API).
                   </p>
                 </div>
               </div>
@@ -85,19 +116,11 @@ export function EgressoConfiguracoesPage() {
                   className="sr-only"
                   onChange={(event) => {
                     const arquivo = event.target.files?.[0]
-
-                    if (!arquivo) {
-                      return
-                    }
-
+                    if (!arquivo) return
                     setFotoPreview((current) => {
-                      if (current) {
-                        URL.revokeObjectURL(current)
-                      }
-
+                      if (current) URL.revokeObjectURL(current)
                       return URL.createObjectURL(arquivo)
                     })
-                    setMensagemPerfil("")
                   }}
                 />
                 <Button
@@ -123,7 +146,7 @@ export function EgressoConfiguracoesPage() {
                   value={formState.nome}
                   onChange={(event) => {
                     setFormState((current) => ({ ...current, nome: event.target.value }))
-                    setMensagemPerfil("")
+                    setMensagem(null)
                   }}
                   placeholder="Digite seu nome completo…"
                 />
@@ -142,7 +165,7 @@ export function EgressoConfiguracoesPage() {
                   value={formState.email}
                   onChange={(event) => {
                     setFormState((current) => ({ ...current, email: event.target.value }))
-                    setMensagemPerfil("")
+                    setMensagem(null)
                   }}
                   placeholder="Digite seu e-mail…"
                 />
@@ -151,15 +174,19 @@ export function EgressoConfiguracoesPage() {
           </form>
         </CardContent>
         <CardFooter className="justify-between gap-3">
-          <p aria-live="polite" className="text-sm text-muted-foreground">
-            {mensagemPerfil}
+          <p
+            aria-live="polite"
+            className={`text-sm ${
+              mensagem?.tipo === "erro" ? "text-destructive" : "text-muted-foreground"
+            }`}
+          >
+            {mensagem?.texto ?? ""}
           </p>
-          <Button type="submit" form="perfil-form">
-            Salvar perfil
+          <Button type="submit" form="perfil-form" disabled={updateUser.isPending}>
+            {updateUser.isPending ? "Salvando…" : "Salvar perfil"}
           </Button>
         </CardFooter>
       </Card>
-
     </div>
   )
 }
