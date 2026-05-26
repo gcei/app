@@ -7,33 +7,13 @@ import { Input } from "@/components/ui/input"
 import { useAuth } from "@/contexts/AuthContext"
 import { ApiError } from "@/lib/api/http"
 
-type AccessMode = "egresso" | "empresa"
-
-const accessLabels: Record<AccessMode, string> = {
-  egresso: "Sou egresso",
-  empresa: "Acesso IFAL",
-}
-
-const emailPlaceholders: Record<AccessMode, string> = {
-  egresso: "seu.email@exemplo.com",
-  empresa: "empresa@dominio.com",
-}
-
 export function LoginPage() {
   const navigate = useNavigate()
   const { login } = useAuth()
-  const [accessMode, setAccessMode] = useState<AccessMode>("egresso")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  const switchMode = () => {
-    setAccessMode((mode) => (mode === "egresso" ? "empresa" : "egresso"))
-    setEmail("")
-    setPassword("")
-    setError(null)
-  }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -90,7 +70,7 @@ export function LoginPage() {
               Acesse o sistema
             </h1>
             <p className="text-sm leading-6 text-muted-foreground">
-              Escolha como deseja acessar o sistema.
+              Entre com seu e-mail e senha.
             </p>
           </div>
         </div>
@@ -112,7 +92,7 @@ export function LoginPage() {
                   autoComplete="username"
                   inputMode="email"
                   spellCheck={false}
-                  placeholder={emailPlaceholders[accessMode]}
+                  placeholder="seu.email@exemplo.com"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   disabled={submitting}
@@ -162,20 +142,6 @@ export function LoginPage() {
               <Button type="submit" className="mt-1 w-full" disabled={submitting}>
                 {submitting ? "Entrando…" : "Entrar"}
               </Button>
-
-              <div className="flex justify-center pt-1 text-sm text-muted-foreground">
-                <Button
-                  type="button"
-                  variant="link"
-                  className="h-auto px-0"
-                  onClick={switchMode}
-                  disabled={submitting}
-                >
-                  {accessMode === "egresso"
-                    ? accessLabels.empresa
-                    : accessLabels.egresso}
-                </Button>
-              </div>
             </form>
           </CardContent>
         </Card>
