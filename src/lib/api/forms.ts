@@ -10,7 +10,7 @@
  * - Export de respostas em **CSV** (`text/csv`).
  */
 
-import { api } from "./http"
+import { api, ApiError } from "./http"
 import type {
   ApiEnvelope,
   CreateFormPayload,
@@ -93,6 +93,25 @@ export async function exportFormResultsCsv(id: string): Promise<Blob> {
   return api.getBlob(`/forms/${id}/results/export`, {
     headers: { Accept: "text/csv" },
   })
+}
+
+// --- Form ativo (gate do egresso) ---
+
+/**
+ * `GET /forms/active` — formulário atualmente ativo (a janela `opensAt`/`closesAt`
+ * é decidida pelo backend). Retorna `null` quando não há nenhum ativo (404).
+ *
+ * Obs.: a resposta é `FormResponseDto` e **não traz `alreadySubmitted`** — para
+ * saber se o egresso já respondeu, consulte `getFormFill(slug)`.
+ */
+export async function getActiveForm(): Promise<Form | null> {
+  try {
+    const res = await api.get<ApiEnvelope<Form>>("/forms/active")
+    return res.data
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null
+    throw error
+  }
 }
 
 // --- Preenchimento (egresso) ---

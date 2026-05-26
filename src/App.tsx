@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom"
 
 import { ProtectedRoute } from "@/components/protected-route"
+import { RequireSurvey } from "@/components/require-survey"
 import { EmpresaCandidatosPage } from "@/pages/empresa-candidatos-page"
 import { EmpresaCandidatoCurriculoPage } from "@/pages/empresa-candidato-curriculo-page"
 import { EgressoHomePage } from "@/pages/egresso-home-page"
@@ -30,8 +31,9 @@ export function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedRoute />}>
-      <Route path="/" element={<Navigate replace to="/home/egresso/curriculo" />} />
       <Route path="/pesquisa/:slug" element={<PesquisaAnualPage />} />
+      <Route element={<RequireSurvey />}>
+      <Route path="/" element={<Navigate replace to="/home/egresso/curriculo" />} />
       <Route path="/home/egresso" element={<EgressoHomePage />}>
         <Route index element={<Navigate replace to="curriculo" />} />
         <Route path="curriculo" element={<EgressoCurriculosPage />} />
@@ -107,6 +109,7 @@ export function App() {
           element={<InternoEmpresaEditarPage />}
         />
         <Route path="configuracoes" element={<EgressoConfiguracoesPage />} />
+      </Route>
       </Route>
       </Route>
     </Routes>

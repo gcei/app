@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   createForm,
   deleteForm,
+  getActiveForm,
   getForm,
   getFormFill,
   getFormResults,
@@ -17,6 +18,7 @@ import {
 } from "@/lib/api/forms"
 import type {
   CreateFormPayload,
+  FormFill,
   SubmitFormPayload,
   UpdateFormPayload,
 } from "@/lib/api/types"
@@ -81,6 +83,18 @@ export function useFormResultsStats(id: string | undefined) {
   })
 }
 
+/**
+ * Form atualmente ativo (`/forms/active`). `enabled` permite restringir a
+ * consulta ao egresso (STUDENT) — ver gate `RequireSurvey`.
+ */
+export function useActiveForm(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.forms.active(),
+    queryFn: getActiveForm,
+    enabled,
+  })
+}
+
 export function useFormFill(slug: string | undefined) {
   return useQuery({
     queryKey: queryKeys.forms.fill(slug ?? ""),
@@ -93,7 +107,14 @@ export function useSubmitFormFill(slug: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (payload: SubmitFormPayload) => submitFormFill(slug, payload),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.forms.fill(slug) }),
+    onSuccess: () => {
+      // Marca como já enviado de imediato no cache: evita que o gate
+      // (RequireSurvey) redirecione de volta para a pesquisa na janela entre
+      // o sucesso e o refetch disparado pelo invalidate.
+      queryClient.setQueryData<FormFill>(queryKeys.forms.fill(slug), (prev) =>
+        prev ? { ...prev, alreadySubmitted: true } : prev,
+      )
+      queryClient.invalidateQueries({ queryKey: queryKeys.forms.fill(slug) })
+    },
   })
 }

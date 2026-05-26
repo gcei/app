@@ -49,5 +49,7 @@ export const queryKeys = {
       [...queryKeys.forms.detail(id), "results", questionId, "answers"] as const,
     /** Formulário público para preenchimento (`/form/fill/{slug}`). */
     fill: (slug: string) => ["form-fill", slug] as const,
+    /** Formulário atualmente ativo (`/forms/active`) — gate do egresso. */
+    active: () => [...queryKeys.forms.all, "active"] as const,
   },
 } as const
