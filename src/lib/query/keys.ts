@@ -24,7 +24,7 @@ export const queryKeys = {
   /** Usuários (`/users`) — visão interna/admin. */
   users: {
     all: ["users"] as const,
-    list: (params?: Record<string, unknown>) =>
+    list: (params?: object) =>
       [...queryKeys.users.all, "list", params ?? {}] as const,
     detail: (id: string) => [...queryKeys.users.all, "detail", id] as const,
     /** Currículos públicos de um usuário (`/users/{userId}/resumes`). */
@@ -39,7 +39,7 @@ export const queryKeys = {
   /** Formulários/pesquisas (`/forms`). */
   forms: {
     all: ["forms"] as const,
-    list: (params?: Record<string, unknown>) =>
+    list: (params?: object) =>
       [...queryKeys.forms.all, "list", params ?? {}] as const,
     detail: (id: string) => [...queryKeys.forms.all, "detail", id] as const,
     results: (id: string) => [...queryKeys.forms.detail(id), "results"] as const,

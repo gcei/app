@@ -37,7 +37,7 @@ import {
 } from "@/lib/pesquisa-form-storage"
 
 export function InternoPesquisaAnualPerguntasPage() {
-  const [forms, setForms] = useState<PesquisaForm[]>(() => getForms())
+  const [forms] = useState<PesquisaForm[]>(() => getForms())
   const [respostasByForm, setRespostasByForm] = useState<Record<string, number>>(() =>
     forms.reduce<Record<string, number>>((acc, f) => {
       acc[f.id] = getRespostas(f.id).length
