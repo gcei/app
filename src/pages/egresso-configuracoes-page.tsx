@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { PasswordInput } from "@/components/ui/password-input"
+import { Switch } from "@/components/ui/switch"
 import { useAuth } from "@/contexts/AuthContext"
 import { useUpdateUser } from "@/hooks/api/use-users"
 import { apiErrorMessage } from "@/lib/api/http"
@@ -61,6 +62,8 @@ function PerfilForm({ user }: { user: User }) {
     cidade: user.city ?? "",
     // Normaliza o valor salvo (pode vir só com dígitos) reaplicando a máscara.
     telefone: maskPhone(user.phoneNumber ?? ""),
+    // Disponibilidade para oportunidades (visível para as empresas).
+    disponivel: user.available,
   })
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -82,6 +85,7 @@ function PerfilForm({ user }: { user: User }) {
           city: formState.cidade.trim(),
           // Envia apenas os dígitos; a máscara é puramente visual.
           phoneNumber: onlyDigits(formState.telefone),
+          available: formState.disponivel,
         },
       },
       {
@@ -187,6 +191,31 @@ function PerfilForm({ user }: { user: User }) {
                 }}
                 placeholder="Ex.: Maceió"
               />
+            </div>
+          </div>
+
+          {/* Controla a disponibilidade: quando desligado, o perfil não
+              aparece nas listagens de candidatos das empresas. */}
+          <div className="flex items-start gap-3">
+            <Switch
+              id="configuracao-disponivel"
+              checked={formState.disponivel}
+              onCheckedChange={(checked) => {
+                setFormState((current) => ({ ...current, disponivel: checked }))
+                setMensagem(null)
+              }}
+            />
+            <div className="flex flex-col gap-1">
+              <label
+                htmlFor="configuracao-disponivel"
+                className="text-sm font-medium"
+              >
+                Disponível para oportunidades
+              </label>
+              <p className="text-sm text-muted-foreground">
+                Quando desligado, seu perfil fica como “Indisponível” e não
+                aparece para as empresas.
+              </p>
             </div>
           </div>
         </form>
