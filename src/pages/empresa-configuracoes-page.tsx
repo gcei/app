@@ -1,5 +1,16 @@
 import { useState } from "react"
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -10,13 +21,15 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { PasswordInput } from "@/components/ui/password-input"
 import { useAuth } from "@/contexts/AuthContext"
-import { useUpdateUser } from "@/hooks/api/use-users"
+import { useDeleteUser, useUpdateUser } from "@/hooks/api/use-users"
 
 export function EmpresaConfiguracoesPage() {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const updateProfile = useUpdateUser()
   const updatePassword = useUpdateUser()
+  const deleteAccount = useDeleteUser()
 
   const [perfil, setPerfil] = useState({
     nome: user?.name ?? "",
@@ -29,6 +42,7 @@ export function EmpresaConfiguracoesPage() {
   const [mensagemSenha, setMensagemSenha] = useState<
     { tipo: "ok" | "erro"; texto: string } | null
   >(null)
+  const [erroExcluir, setErroExcluir] = useState<string | null>(null)
 
   const handleSavePerfil = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -180,10 +194,9 @@ export function EmpresaConfiguracoesPage() {
                 <label htmlFor="empresa-nova-senha" className="text-sm font-medium">
                   Nova senha
                 </label>
-                <Input
+                <PasswordInput
                   id="empresa-nova-senha"
                   name="nova_senha"
-                  type="password"
                   autoComplete="new-password"
                   value={senha.novaSenha}
                   onChange={(event) => {
@@ -198,10 +211,9 @@ export function EmpresaConfiguracoesPage() {
                 <label htmlFor="empresa-confirmar-senha" className="text-sm font-medium">
                   Confirmar nova senha
                 </label>
-                <Input
+                <PasswordInput
                   id="empresa-confirmar-senha"
                   name="confirmar_senha"
-                  type="password"
                   autoComplete="new-password"
                   value={senha.confirmarSenha}
                   onChange={(event) => {
@@ -232,6 +244,54 @@ export function EmpresaConfiguracoesPage() {
           >
             {updatePassword.isPending ? "Salvando…" : "Atualizar senha"}
           </Button>
+        </CardFooter>
+      </Card>
+
+      <Card className="border-destructive/40">
+        <CardHeader>
+          <CardTitle>Excluir conta</CardTitle>
+          <CardDescription>
+            Remove permanentemente sua conta e seus dados. Esta ação não pode ser
+            desfeita.
+          </CardDescription>
+        </CardHeader>
+        <CardFooter className="justify-between gap-3">
+          <p aria-live="polite" className="text-sm text-destructive">
+            {erroExcluir ?? ""}
+          </p>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" disabled={deleteAccount.isPending}>
+                {deleteAccount.isPending ? "Excluindo…" : "Excluir minha conta"}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir sua conta?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Sua conta e seus dados serão removidos permanentemente. Esta
+                  ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-white hover:bg-destructive/90"
+                  onClick={() => {
+                    if (!user) return
+                    setErroExcluir(null)
+                    deleteAccount.mutate(user.id, {
+                      onSuccess: () => logout(),
+                      onError: () =>
+                        setErroExcluir("Não foi possível excluir a conta."),
+                    })
+                  }}
+                >
+                  Excluir conta
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardFooter>
       </Card>
     </div>
