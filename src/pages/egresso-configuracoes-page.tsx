@@ -13,6 +13,13 @@ import { Input } from "@/components/ui/input"
 import { useAuth } from "@/contexts/AuthContext"
 import { useUpdateUser } from "@/hooks/api/use-users"
 import { apiErrorMessage } from "@/lib/api/http"
+import {
+  isValidPhone,
+  maskPhone,
+  onlyDigits,
+  PHONE_INVALID_MESSAGE,
+  PHONE_MAX_LENGTH,
+} from "@/lib/phone"
 import type { User } from "@/lib/api/types"
 
 export function EgressoConfiguracoesPage() {
@@ -48,12 +55,20 @@ function PerfilForm({ user }: { user: User }) {
     nome: user.name ?? "",
     email: user.email ?? "",
     cidade: user.city ?? "",
-    telefone: user.phoneNumber ?? "",
+    // Normaliza o valor salvo (pode vir só com dígitos) reaplicando a máscara.
+    telefone: maskPhone(user.phoneNumber ?? ""),
   })
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setMensagem(null)
+
+    // Telefone é opcional: só valida quando preenchido (10 ou 11 dígitos).
+    if (!isValidPhone(formState.telefone)) {
+      setMensagem({ tipo: "erro", texto: PHONE_INVALID_MESSAGE })
+      return
+    }
+
     updateUser.mutate(
       {
         id: user.id,
@@ -61,7 +76,8 @@ function PerfilForm({ user }: { user: User }) {
           name: formState.nome.trim(),
           email: formState.email.trim(),
           city: formState.cidade.trim(),
-          phoneNumber: formState.telefone.trim(),
+          // Envia apenas os dígitos; a máscara é puramente visual.
+          phoneNumber: onlyDigits(formState.telefone),
         },
       },
       {
@@ -134,16 +150,18 @@ function PerfilForm({ user }: { user: User }) {
                 id="configuracao-telefone"
                 name="telefone"
                 type="tel"
+                inputMode="numeric"
                 autoComplete="tel"
                 value={formState.telefone}
                 onChange={(event) => {
                   setFormState((current) => ({
                     ...current,
-                    telefone: event.target.value,
+                    telefone: maskPhone(event.target.value),
                   }))
                   setMensagem(null)
                 }}
                 placeholder="(00) 00000-0000"
+                maxLength={PHONE_MAX_LENGTH}
               />
             </div>
 
@@ -172,7 +190,7 @@ function PerfilForm({ user }: { user: User }) {
       <CardFooter className="justify-between gap-3">
         <p
           aria-live="polite"
-          className={`text-sm ${
+          className={`whitespace-pre-line text-sm ${
             mensagem?.tipo === "erro" ? "text-destructive" : "text-muted-foreground"
           }`}
         >

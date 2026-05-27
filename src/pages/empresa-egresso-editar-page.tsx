@@ -22,6 +22,13 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { useUpdateUser, useUserById } from "@/hooks/api/use-users"
 import { apiErrorMessage } from "@/lib/api/http"
+import {
+  isValidPhone,
+  maskPhone,
+  onlyDigits,
+  PHONE_INVALID_MESSAGE,
+  PHONE_MAX_LENGTH,
+} from "@/lib/phone"
 import type { User } from "@/lib/api/types"
 
 const LISTA_PATH = "/home/interno/egressos-cadastrados"
@@ -72,13 +79,21 @@ function EditarEgressoForm({ egresso }: { egresso: User }) {
   const [nome, setNome] = useState(egresso.name)
   const [email, setEmail] = useState(egresso.email)
   const [cidade, setCidade] = useState(egresso.city ?? "")
-  const [telefone, setTelefone] = useState(egresso.phoneNumber ?? "")
+  // Normaliza o valor salvo (pode vir só com dígitos) reaplicando a máscara.
+  const [telefone, setTelefone] = useState(maskPhone(egresso.phoneNumber ?? ""))
   const [disponivel, setDisponivel] = useState(egresso.available)
   const [erro, setErro] = useState<string | null>(null)
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setErro(null)
+
+    // Telefone é opcional: só valida quando preenchido (10 ou 11 dígitos).
+    if (!isValidPhone(telefone)) {
+      setErro(PHONE_INVALID_MESSAGE)
+      return
+    }
+
     updateUser.mutate(
       {
         id: egresso.id,
@@ -86,7 +101,8 @@ function EditarEgressoForm({ egresso }: { egresso: User }) {
           name: nome.trim(),
           email: email.trim(),
           city: cidade.trim(),
-          phoneNumber: telefone.trim(),
+          // Envia apenas os dígitos; a máscara é puramente visual.
+          phoneNumber: onlyDigits(telefone),
           available: disponivel,
         },
       },
@@ -149,10 +165,12 @@ function EditarEgressoForm({ egresso }: { egresso: User }) {
                 id="editar-egresso-telefone"
                 name="telefone"
                 type="tel"
+                inputMode="numeric"
                 autoComplete="tel"
                 value={telefone}
-                onChange={(event) => setTelefone(event.target.value)}
+                onChange={(event) => setTelefone(maskPhone(event.target.value))}
                 placeholder="(00) 00000-0000"
+                maxLength={PHONE_MAX_LENGTH}
               />
             </div>
 
@@ -186,7 +204,7 @@ function EditarEgressoForm({ egresso }: { egresso: User }) {
           </div>
 
           {erro ? (
-            <p role="alert" className="text-sm font-medium text-destructive">
+            <p role="alert" className="whitespace-pre-line text-sm font-medium text-destructive">
               {erro}
             </p>
           ) : null}

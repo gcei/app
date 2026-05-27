@@ -8,6 +8,13 @@ import { PasswordInput } from "@/components/ui/password-input"
 import { Switch } from "@/components/ui/switch"
 import { useAuth } from "@/contexts/AuthContext"
 import { ApiError } from "@/lib/api/http"
+import {
+  isValidPhone,
+  maskPhone,
+  onlyDigits,
+  PHONE_INVALID_MESSAGE,
+  PHONE_MAX_LENGTH,
+} from "@/lib/phone"
 
 export function CadastroPage() {
   const navigate = useNavigate()
@@ -28,9 +35,21 @@ export function CadastroPage() {
     (event: React.ChangeEvent<HTMLInputElement>) =>
       setForm((f) => ({ ...f, [key]: event.target.value }))
 
+  // Telefone usa máscara dinâmica BR e teclado numérico no mobile.
+  const updatePhone = (event: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((f) => ({ ...f, phoneNumber: maskPhone(event.target.value) }))
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError(null)
+
+    // Telefone é obrigatório neste cadastro: precisa ter 10 ou 11 dígitos.
+    const phoneDigits = onlyDigits(form.phoneNumber)
+    if (phoneDigits.length === 0 || !isValidPhone(phoneDigits)) {
+      setError(PHONE_INVALID_MESSAGE)
+      return
+    }
+
     setSubmitting(true)
 
     try {
@@ -41,7 +60,8 @@ export function CadastroPage() {
         password: form.password,
         role: "STUDENT",
         city: form.city.trim(),
-        phoneNumber: form.phoneNumber.trim(),
+        // Envia apenas os dígitos; a máscara é puramente visual.
+        phoneNumber: phoneDigits,
         available,
       })
       navigate("/home/egresso", { replace: true })
@@ -142,10 +162,12 @@ export function CadastroPage() {
                     id="cadastro-telefone"
                     name="phoneNumber"
                     type="tel"
+                    inputMode="numeric"
                     autoComplete="tel"
                     value={form.phoneNumber}
-                    onChange={update("phoneNumber")}
+                    onChange={updatePhone}
                     placeholder="(00) 00000-0000"
+                    maxLength={PHONE_MAX_LENGTH}
                     disabled={submitting}
                     required
                   />
@@ -168,7 +190,7 @@ export function CadastroPage() {
               </div>
 
               {error ? (
-                <p role="alert" className="text-sm font-medium text-destructive">
+                <p role="alert" className="whitespace-pre-line text-sm font-medium text-destructive">
                   {error}
                 </p>
               ) : null}

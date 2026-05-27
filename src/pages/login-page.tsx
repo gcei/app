@@ -133,7 +133,7 @@ export function LoginPage() {
               {error ? (
                 <p
                   role="alert"
-                  className="text-sm font-medium text-destructive"
+                  className="whitespace-pre-line text-sm font-medium text-destructive"
                 >
                   {error}
                 </p>
