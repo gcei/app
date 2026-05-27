@@ -75,15 +75,21 @@ export interface ResetPasswordPayload {
 }
 
 /**
- * Payload de `PATCH /users/{id}` (`UpdateUserDto`). Só estes campos são
- * atualizáveis (sem phoneNumber/city/photoRef). Self-update é permitido
+ * Payload de `PATCH /users/{id}` (`UpdateUserDto`). Self-update é permitido
  * (STUDENT e ADMIN podem editar o próprio usuário).
+ *
+ * Campos atualizáveis: name, email, password, role, blocked, available, city,
+ * phoneNumber. (photoRef não é atualizável pela API.)
  */
 export interface UpdateUserPayload {
   name?: string
   email?: string
   password?: string
   role?: UserRole
+  blocked?: boolean
+  available?: boolean
+  city?: string
+  phoneNumber?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -133,8 +139,12 @@ export interface Resume {
   createdAt: string
   experiences: Experience[]
   languages: Language[]
+  /** Legado: o egresso não preenche mais `abilities` (substituídas por hard/soft skills). */
   abilities: Ability[]
   courses: Course[]
+  /** Hard/soft skills do usuário, embutidas pela API na resposta do currículo. */
+  hardSkills: Skill[]
+  softSkills: Skill[]
 }
 
 /** Item de listagem de currículo (`ResumeListItemResponseDto`), sem aninhados. */

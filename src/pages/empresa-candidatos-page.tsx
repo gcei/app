@@ -3,6 +3,7 @@ import { XIcon } from "@phosphor-icons/react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
 import {
   Pagination,
@@ -28,6 +29,7 @@ const filterFields = [
   { key: "course", label: "Formação", placeholder: "Busque por formação…", autoComplete: "off" },
   { key: "city", label: "Cidade", placeholder: "Busque por cidade…", autoComplete: "address-level2" },
   { key: "language", label: "Idioma", placeholder: "Busque por idioma…", autoComplete: "off" },
+  { key: "email", label: "E-mail", placeholder: "Busque por e-mail…", autoComplete: "off" },
 ] as const
 
 type FilterKey = (typeof filterFields)[number]["key"]
@@ -49,6 +51,7 @@ export function EmpresaCandidatosPage() {
 
   const filters: Record<FilterKey, string> = {
     name: searchParams.get("name") ?? "",
+    email: searchParams.get("email") ?? "",
     hardSkill: searchParams.get("hardSkill") ?? "",
     softSkill: searchParams.get("softSkill") ?? "",
     course: searchParams.get("course") ?? "",
@@ -56,8 +59,14 @@ export function EmpresaCandidatosPage() {
     language: searchParams.get("language") ?? "",
   }
 
+  // Flags booleanas de inclusão do /users.
+  const includeBlocked = searchParams.get("blocked") === "true"
+  const includeUnavailable = searchParams.get("unavailable") === "true"
+
   const apiFilters: UsersFilters = {
     ...filters,
+    blocked: includeBlocked || undefined,
+    unavailable: includeUnavailable || undefined,
     page: currentPage,
     size: PAGE_SIZE,
   }
@@ -69,7 +78,10 @@ export function EmpresaCandidatosPage() {
   )
   const total = usersQuery.data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
-  const hasActiveFilters = Object.values(filters).some((value) => value.length > 0)
+  const hasActiveFilters =
+    Object.values(filters).some((value) => value.length > 0) ||
+    includeBlocked ||
+    includeUnavailable
 
   const updateFilter = (key: FilterKey, value: string) => {
     const nextParams = new URLSearchParams(searchParams)
@@ -78,6 +90,17 @@ export function EmpresaCandidatosPage() {
       nextParams.delete(key)
     } else {
       nextParams.set(key, value)
+    }
+    setSearchParams(nextParams)
+  }
+
+  const toggleFlag = (key: "blocked" | "unavailable", checked: boolean) => {
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.set("pagina", "1")
+    if (checked) {
+      nextParams.set(key, "true")
+    } else {
+      nextParams.delete(key)
     }
     setSearchParams(nextParams)
   }
@@ -124,6 +147,38 @@ export function EmpresaCandidatosPage() {
                 />
               </div>
             ))}
+
+            <div className="flex flex-col gap-2">
+              <label
+                htmlFor="filtro-blocked"
+                className="text-sm font-medium text-foreground"
+              >
+                Incluir bloqueados
+              </label>
+              <div className="flex h-9 items-center">
+                <Switch
+                  id="filtro-blocked"
+                  checked={includeBlocked}
+                  onCheckedChange={(checked) => toggleFlag("blocked", checked)}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label
+                htmlFor="filtro-unavailable"
+                className="text-sm font-medium text-foreground"
+              >
+                Incluir indisponíveis
+              </label>
+              <div className="flex h-9 items-center">
+                <Switch
+                  id="filtro-unavailable"
+                  checked={includeUnavailable}
+                  onCheckedChange={(checked) => toggleFlag("unavailable", checked)}
+                />
+              </div>
+            </div>
           </div>
 
           {hasActiveFilters ? (
@@ -248,7 +303,7 @@ function CandidatoCard({ candidato }: { candidato: User }) {
   const softSkills = resumeQuery.data?.softSkills ?? []
 
   return (
-    <div className="flex flex-col gap-4 rounded-xl border border-border/80 bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
+    <div className="flex h-full flex-col gap-4 rounded-xl border border-border/80 bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-start gap-4">
         <Avatar size="lg">
           <AvatarFallback className="bg-primary text-primary-foreground">
@@ -284,7 +339,7 @@ function CandidatoCard({ candidato }: { candidato: User }) {
         </div>
       ) : null}
 
-      <div className="flex justify-end">
+      <div className="mt-auto flex justify-end">
         <Button asChild variant="outline">
           <NavLink to={`/home/interno/candidatos/${candidato.id}`}>
             Visualizar currículo

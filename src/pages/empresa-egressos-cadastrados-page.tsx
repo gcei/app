@@ -80,7 +80,7 @@ export function EmpresaEgressosCadastradosPage() {
                       <TableCell>{egresso.email}</TableCell>
                       <TableCell>{egresso.city ?? "—"}</TableCell>
                       <TableCell>
-                        {egresso.blocked ? "Bloqueado" : "Ativo"}
+                        {egresso.available ? "Disponível" : "Indisponível"}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">

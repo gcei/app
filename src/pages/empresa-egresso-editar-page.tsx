@@ -71,11 +71,8 @@ function EditarEgressoForm({ egresso }: { egresso: User }) {
   const [nome, setNome] = useState(egresso.name)
   const [email, setEmail] = useState(egresso.email)
   const [cidade, setCidade] = useState(egresso.city ?? "")
-  const [disponivel, setDisponivel] = useState(egresso.available)
-  // Mockados: editáveis na tela, mas NÃO enviados no PATCH (UpdateUserDto não
-  // os aceita).
   const [telefone, setTelefone] = useState(egresso.phoneNumber ?? "")
-  const [fotoRef, setFotoRef] = useState(egresso.photoRef ?? "")
+  const [disponivel, setDisponivel] = useState(egresso.available)
   const [erro, setErro] = useState<string | null>(null)
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -87,7 +84,8 @@ function EditarEgressoForm({ egresso }: { egresso: User }) {
         payload: {
           name: nome.trim(),
           email: email.trim(),
-          city: cidade.trim() || null,
+          city: cidade.trim(),
+          phoneNumber: telefone.trim(),
           available: disponivel,
         },
       },
@@ -171,19 +169,6 @@ function EditarEgressoForm({ egresso }: { egresso: User }) {
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <label htmlFor="editar-egresso-foto" className="text-sm font-medium">
-              Foto de perfil (referência)
-            </label>
-            <Input
-              id="editar-egresso-foto"
-              name="foto"
-              value={fotoRef}
-              onChange={(event) => setFotoRef(event.target.value)}
-              placeholder="URL ou referência da foto…"
-            />
-          </div>
-
           <div className="flex items-center gap-3">
             <Switch
               id="editar-egresso-disponivel"
@@ -197,11 +182,6 @@ function EditarEgressoForm({ egresso }: { egresso: User }) {
               Disponível para oportunidades
             </label>
           </div>
-
-          <p className="text-xs text-muted-foreground">
-            Telefone e foto ainda não são persistidos (placeholders) e não são
-            enviados ao salvar.
-          </p>
 
           {erro ? (
             <p role="alert" className="text-sm font-medium text-destructive">
