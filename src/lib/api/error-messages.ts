@@ -86,32 +86,32 @@ export const validationErrorMessages = {
   "validation/array-min-size":
     "{property} deve ter no mínimo {constraint1} item(ns).",
   "validation/array-min-size/options":
-    "Opções deve ter no mínimo {constraint1} itens.",
+    "Opções deve ter no mínimo 2 itens.",
   "validation/array-min-size/questions":
-    "Perguntas deve ter no mínimo {constraint1} item(ns).",
+    "Perguntas deve ter no mínimo 1 item.",
   "validation/array-min-size/answers":
-    "Respostas deve ter no mínimo {constraint1} item(ns).",
+    "Respostas deve ter no mínimo 1 item.",
   "validation/min": "{property} não pode ser menor que {constraint1}.",
-  "validation/min/page": "Página deve ser no mínimo {constraint1}.",
-  "validation/min/size": "Tamanho deve ser no mínimo {constraint1}.",
-  "validation/length":
+  "validation/min/page":     "Página deve ser no mínimo 1.",
+  "validation/min/size":     "Tamanho deve ser no mínimo 1.",
+  "validation/is-length":
     "{property} deve ter entre {constraint1} e {constraint2} caracteres.",
-  "validation/length/name":
-    "Nome deve ter entre {constraint1} e {constraint2} caracteres.",
-  "validation/length/password":
-    "Senha deve ter entre {constraint1} e {constraint2} caracteres.",
-  "validation/length/role":
-    "Cargo deve ter entre {constraint1} e {constraint2} caracteres.",
-  "validation/length/company":
-    "Empresa deve ter entre {constraint1} e {constraint2} caracteres.",
-  "validation/length/title":
-    "Título deve ter entre {constraint1} e {constraint2} caracteres.",
-  "validation/length/level":
-    "Nível deve ter entre {constraint1} e {constraint2} caracteres.",
-  "validation/length/coverLetter":
-    "Carta de apresentação deve ter no máximo {constraint2} caracteres.",
+  "validation/is-length/name":
+    "Nome deve ter entre 3 e 255 caracteres.",
+  "validation/is-length/password":
+    "Senha deve ter entre 6 e 255 caracteres.",
+  "validation/is-length/role":
+    "Cargo deve ter entre 1 e 255 caracteres.",
+  "validation/is-length/company":
+    "Empresa deve ter entre 1 e 255 caracteres.",
+  "validation/is-length/title":
+    "Título deve ter entre 1 e 255 caracteres.",
+  "validation/is-length/level":
+    "Nível deve ter entre 1 e 255 caracteres.",
+  "validation/is-length/coverLetter":
+    "Carta de apresentação deve ter no máximo 2000 caracteres.",
   "validation/validate-nested": "{property} possui dados inválidos.",
-} as const
+} as const;
 
 export type ValidationErrorCode = keyof typeof validationErrorMessages
 

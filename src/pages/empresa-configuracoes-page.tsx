@@ -161,7 +161,7 @@ export function EmpresaConfiguracoesPage() {
         <CardFooter className="justify-between gap-3">
           <p
             aria-live="polite"
-            className={`text-sm ${
+            className={`whitespace-pre-line text-sm ${
               mensagemPerfil?.tipo === "erro"
                 ? "text-destructive"
                 : "text-muted-foreground"
@@ -230,7 +230,7 @@ export function EmpresaConfiguracoesPage() {
         <CardFooter className="justify-between gap-3">
           <p
             aria-live="polite"
-            className={`text-sm ${
+            className={`whitespace-pre-line text-sm ${
               mensagemSenha?.tipo === "erro"
                 ? "text-destructive"
                 : "text-muted-foreground"
@@ -257,7 +257,7 @@ export function EmpresaConfiguracoesPage() {
           </CardDescription>
         </CardHeader>
         <CardFooter className="justify-between gap-3">
-          <p aria-live="polite" className="text-sm text-destructive">
+          <p aria-live="polite" className="whitespace-pre-line text-sm text-destructive">
             {erroExcluir ?? ""}
           </p>
           <AlertDialog>

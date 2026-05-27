@@ -99,8 +99,8 @@ function messageFromBody(body: unknown, fallback: string): string {
   if (body && typeof body === "object" && "message" in body) {
     const { message } = body as ApiErrorBody
     // Validação (class-validator): array de codes `validation/{regra}/{prop}` →
-    // traduz cada um para pt-BR e junta as mensagens amigáveis.
-    if (Array.isArray(message)) return message.map(messageForValidationCode).join(", ")
+    // traduz cada um para pt-BR e junta as mensagens amigáveis, uma por linha.
+    if (Array.isArray(message)) return message.map(messageForValidationCode).join("\n")
     // Domínio: `message` é um code do error-mapping → traduz para pt-BR; se não
     // for um code conhecido, usa o próprio texto.
     if (typeof message === "string") return messageForErrorCode(message, message)

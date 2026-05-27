@@ -140,7 +140,7 @@ export function EmpresaUsuarioNovoPage() {
             </div>
 
             {erro ? (
-              <p role="alert" className="text-sm font-medium text-destructive">
+              <p role="alert" className="whitespace-pre-line text-sm font-medium text-destructive">
                 {erro}
               </p>
             ) : null}

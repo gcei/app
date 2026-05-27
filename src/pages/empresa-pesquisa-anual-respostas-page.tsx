@@ -98,7 +98,7 @@ export function EmpresaPesquisaAnualRespostasPage() {
       </div>
 
       {error ? (
-        <p role="alert" className="text-sm font-medium text-destructive">
+        <p role="alert" className="whitespace-pre-line text-sm font-medium text-destructive">
           {error}
         </p>
       ) : null}
