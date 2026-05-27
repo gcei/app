@@ -197,6 +197,38 @@ function ResumeDetail({ resume }: { resume: Resume }) {
           </section>
         ) : null}
 
+        {resume.hardSkills.length > 0 ? (
+          <section className="flex flex-col gap-2">
+            <h2 className="text-sm font-medium text-foreground">Hard Skills</h2>
+            <div className="flex flex-wrap gap-2">
+              {resume.hardSkills.map((skill) => (
+                <span
+                  key={skill.id}
+                  className="rounded-md border px-2 py-1 text-xs text-muted-foreground"
+                >
+                  {skill.title}
+                </span>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {resume.softSkills.length > 0 ? (
+          <section className="flex flex-col gap-2">
+            <h2 className="text-sm font-medium text-foreground">Soft Skills</h2>
+            <div className="flex flex-wrap gap-2">
+              {resume.softSkills.map((skill) => (
+                <span
+                  key={skill.id}
+                  className="rounded-md border px-2 py-1 text-xs text-muted-foreground"
+                >
+                  {skill.title}
+                </span>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         {resume.languages.length > 0 ? (
           <section className="flex flex-col gap-2">
             <h2 className="text-sm font-medium text-foreground">Idiomas</h2>

@@ -27,7 +27,13 @@ import {
   type ResumeFormPayload,
   type SaveResumeInput,
 } from "@/hooks/api/use-resumes"
-import type { Resume } from "@/lib/api/types"
+import {
+  useHardSkills,
+  useSaveSkills,
+  useSoftSkills,
+  type SaveSkillsInput,
+} from "@/hooks/api/use-skills"
+import type { Resume, Skill } from "@/lib/api/types"
 
 interface ExperienceRow {
   key: string
@@ -43,7 +49,7 @@ interface LanguageRow {
   title: string
   level: string
 }
-interface AbilityRow {
+interface SkillRow {
   key: string
   id?: string
   title: string
@@ -61,9 +67,12 @@ interface ResumeFormState {
   public: boolean
   experiences: ExperienceRow[]
   languages: LanguageRow[]
-  abilities: AbilityRow[]
+  hardSkills: SkillRow[]
+  softSkills: SkillRow[]
   courses: CourseRow[]
 }
+
+type SkillKind = "hardSkills" | "softSkills"
 
 const newKey = () => crypto.randomUUID()
 const emptyExperience = (): ExperienceRow => ({
@@ -74,7 +83,7 @@ const emptyExperience = (): ExperienceRow => ({
   until: "",
 })
 const emptyLanguage = (): LanguageRow => ({ key: newKey(), title: "", level: "" })
-const emptyAbility = (): AbilityRow => ({ key: newKey(), title: "" })
+const emptySkill = (): SkillRow => ({ key: newKey(), title: "" })
 const emptyCourse = (): CourseRow => ({
   key: newKey(),
   title: "",
@@ -82,13 +91,20 @@ const emptyCourse = (): CourseRow => ({
   until: "",
 })
 
-const emptyForm = (): ResumeFormState => ({
+const skillToRow = (skill: Skill): SkillRow => ({
+  key: newKey(),
+  id: skill.id,
+  title: skill.title,
+})
+
+const emptyForm = (hardSkills: Skill[], softSkills: Skill[]): ResumeFormState => ({
   title: "",
   coverLetter: "",
   public: false,
   experiences: [],
   languages: [],
-  abilities: [],
+  hardSkills: hardSkills.map(skillToRow),
+  softSkills: softSkills.map(skillToRow),
   courses: [],
 })
 
@@ -97,7 +113,11 @@ const isoToDateInput = (iso: string) => (iso ? iso.slice(0, 10) : "")
 /** Valor do `<input type="date">` → ISO 8601 (meia-noite UTC). */
 const dateInputToIso = (date: string) => `${date}T00:00:00.000Z`
 
-function mapResumeToForm(resume: Resume): ResumeFormState {
+function mapResumeToForm(
+  resume: Resume,
+  hardSkills: Skill[],
+  softSkills: Skill[],
+): ResumeFormState {
   return {
     title: resume.title,
     coverLetter: resume.coverLetter ?? "",
@@ -116,11 +136,8 @@ function mapResumeToForm(resume: Resume): ResumeFormState {
       title: l.title,
       level: l.level,
     })),
-    abilities: resume.abilities.map((a) => ({
-      key: newKey(),
-      id: a.id,
-      title: a.title,
-    })),
+    hardSkills: hardSkills.map(skillToRow),
+    softSkills: softSkills.map(skillToRow),
     courses: resume.courses.map((c) => ({
       key: newKey(),
       id: c.id,
@@ -141,41 +158,68 @@ function updateList<T extends { key: string }>(
 
 export function EgressoCurriculoGerarPage() {
   const { curriculoId } = useParams()
-  if (!curriculoId) {
-    return <ResumeFormScreen mode="create" initial={emptyForm()} />
-  }
-  return <EditResumeLoader id={curriculoId} />
+  return <ResumeEditorLoader id={curriculoId} />
 }
 
-function EditResumeLoader({ id }: { id: string }) {
-  const { data: resume, isLoading, isError, refetch } = useResume(id)
+/**
+ * Carrega o que o editor precisa antes de montar o formulário: as hard/soft
+ * skills do usuário (sempre — são de perfil) e, se estivermos editando, o
+ * currículo.
+ */
+function ResumeEditorLoader({ id }: { id?: string }) {
+  const hardQuery = useHardSkills()
+  const softQuery = useSoftSkills()
+  const resumeQuery = useResume(id)
 
-  if (isLoading) {
+  const loading =
+    hardQuery.isLoading || softQuery.isLoading || (!!id && resumeQuery.isLoading)
+  if (loading) {
     return (
       <p className="py-10 text-center text-sm text-muted-foreground">
-        Carregando currículo…
+        Carregando…
       </p>
     )
   }
-  if (isError || !resume) {
+
+  const resumeError = !!id && (resumeQuery.isError || !resumeQuery.data)
+  if (hardQuery.isError || softQuery.isError || resumeError) {
     return (
       <div className="flex flex-col items-center gap-3 py-10">
         <p className="text-sm text-destructive">
-          Não foi possível carregar o currículo.
+          Não foi possível carregar os dados do currículo.
         </p>
-        <Button variant="outline" size="sm" onClick={() => refetch()}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            void hardQuery.refetch()
+            void softQuery.refetch()
+            if (id) void resumeQuery.refetch()
+          }}
+        >
           Tentar novamente
         </Button>
       </div>
     )
   }
+
+  const hardSkills = hardQuery.data?.data ?? []
+  const softSkills = softQuery.data?.data ?? []
+  const resume = id ? resumeQuery.data : undefined
+
   return (
     <ResumeFormScreen
-      key={resume.id}
-      mode="edit"
-      resumeId={resume.id}
+      key={resume?.id ?? "new"}
+      mode={resume ? "edit" : "create"}
+      resumeId={resume?.id}
       original={resume}
-      initial={mapResumeToForm(resume)}
+      originalHardSkills={hardSkills}
+      originalSoftSkills={softSkills}
+      initial={
+        resume
+          ? mapResumeToForm(resume, hardSkills, softSkills)
+          : emptyForm(hardSkills, softSkills)
+      }
     />
   )
 }
@@ -185,6 +229,8 @@ interface ResumeFormScreenProps {
   initial: ResumeFormState
   resumeId?: string
   original?: Resume
+  originalHardSkills: Skill[]
+  originalSoftSkills: Skill[]
 }
 
 function ResumeFormScreen({
@@ -192,14 +238,25 @@ function ResumeFormScreen({
   initial,
   resumeId,
   original,
+  originalHardSkills,
+  originalSoftSkills,
 }: ResumeFormScreenProps) {
   const navigate = useNavigate()
   const save = useSaveResume()
+  const saveSkills = useSaveSkills()
   const [form, setForm] = useState<ResumeFormState>(initial)
   const [error, setError] = useState<string | null>(null)
   const isEditMode = mode === "edit"
+  const isSaving = save.isPending || saveSkills.isPending
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const addSkill = (kind: SkillKind) =>
+    setForm((f) => ({ ...f, [kind]: [...f[kind], emptySkill()] }))
+  const changeSkill = (kind: SkillKind, key: string, title: string) =>
+    setForm((f) => ({ ...f, [kind]: updateList(f[kind], key, { title }) }))
+  const removeSkill = (kind: SkillKind, key: string) =>
+    setForm((f) => ({ ...f, [kind]: f[kind].filter((i) => i.key !== key) }))
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError(null)
 
@@ -224,9 +281,6 @@ function ResumeFormScreen({
       languages: form.languages
         .filter((l) => l.title.trim() && l.level.trim())
         .map((l) => ({ id: l.id, title: l.title.trim(), level: l.level.trim() })),
-      abilities: form.abilities
-        .filter((a) => a.title.trim())
-        .map((a) => ({ id: a.id, title: a.title.trim() })),
       courses: form.courses
         .filter((c) => c.title.trim() && c.from && c.until)
         .map((c) => ({
@@ -237,16 +291,32 @@ function ResumeFormScreen({
         })),
     }
 
-    const input: SaveResumeInput =
+    const resumeInput: SaveResumeInput =
       isEditMode && resumeId && original
         ? { mode: "edit", id: resumeId, payload, original }
         : { mode: "create", payload }
 
-    save.mutate(input, {
-      onSuccess: () => navigate("/home/egresso/curriculo"),
-      onError: () =>
-        setError("Não foi possível salvar o currículo. Tente novamente."),
-    })
+    const skillsInput: SaveSkillsInput = {
+      hard: form.hardSkills
+        .filter((s) => s.title.trim())
+        .map((s) => ({ id: s.id, title: s.title.trim() })),
+      soft: form.softSkills
+        .filter((s) => s.title.trim())
+        .map((s) => ({ id: s.id, title: s.title.trim() })),
+      originalHard: originalHardSkills,
+      originalSoft: originalSoftSkills,
+    }
+
+    try {
+      // Currículo e skills são recursos independentes (skills são de perfil).
+      await Promise.all([
+        save.mutateAsync(resumeInput),
+        saveSkills.mutateAsync(skillsInput),
+      ])
+      navigate("/home/egresso/curriculo")
+    } catch {
+      setError("Não foi possível salvar o currículo. Tente novamente.")
+    }
   }
 
   return (
@@ -274,7 +344,8 @@ function ResumeFormScreen({
           </CardTitle>
           <CardDescription>
             Os dados de contato (nome, e-mail, telefone e cidade) vêm do seu
-            perfil e aparecem automaticamente no PDF.
+            perfil e aparecem automaticamente no PDF. As hard e soft skills são do
+            seu perfil e valem para todos os seus currículos.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -469,46 +540,27 @@ function ResumeFormScreen({
               ))}
             </FormSection>
 
-            <FormSection
-              title="Habilidades"
-              addLabel="Adicionar habilidade"
-              onAdd={() =>
-                setForm((f) => ({
-                  ...f,
-                  abilities: [...f.abilities, emptyAbility()],
-                }))
-              }
-            >
-              {form.abilities.map((item) => (
-                <div
-                  key={item.key}
-                  className="grid gap-4 rounded-lg border p-4 lg:grid-cols-[minmax(0,1fr)_auto]"
-                >
-                  <Field label="Habilidade">
-                    <Input
-                      value={item.title}
-                      onChange={(e) =>
-                        setForm((f) => ({
-                          ...f,
-                          abilities: updateList(f.abilities, item.key, {
-                            title: e.target.value,
-                          }),
-                        }))
-                      }
-                      placeholder="Ex.: Liderança, React e TypeScript…"
-                    />
-                  </Field>
-                  <RemoveButton
-                    onClick={() =>
-                      setForm((f) => ({
-                        ...f,
-                        abilities: f.abilities.filter((i) => i.key !== item.key),
-                      }))
-                    }
-                  />
-                </div>
-              ))}
-            </FormSection>
+            <SkillSection
+              title="Hard Skills"
+              addLabel="Adicionar hard skill"
+              fieldLabel="Hard skill"
+              placeholder="Ex.: React, TypeScript, SQL…"
+              items={form.hardSkills}
+              onAdd={() => addSkill("hardSkills")}
+              onChangeTitle={(key, value) => changeSkill("hardSkills", key, value)}
+              onRemove={(key) => removeSkill("hardSkills", key)}
+            />
+
+            <SkillSection
+              title="Soft Skills"
+              addLabel="Adicionar soft skill"
+              fieldLabel="Soft skill"
+              placeholder="Ex.: Comunicação, Liderança, Trabalho em equipe…"
+              items={form.softSkills}
+              onAdd={() => addSkill("softSkills")}
+              onChangeTitle={(key, value) => changeSkill("softSkills", key, value)}
+              onRemove={(key) => removeSkill("softSkills", key)}
+            />
 
             <FormSection
               title="Formação"
@@ -591,12 +643,12 @@ function ResumeFormScreen({
             type="button"
             variant="outline"
             onClick={() => navigate("/home/egresso/curriculo")}
-            disabled={save.isPending}
+            disabled={isSaving}
           >
             Cancelar
           </Button>
-          <Button type="submit" form="resume-form" disabled={save.isPending}>
-            {save.isPending
+          <Button type="submit" form="resume-form" disabled={isSaving}>
+            {isSaving
               ? "Salvando…"
               : isEditMode
                 ? "Atualizar currículo"
@@ -630,6 +682,46 @@ function FormSection({
       </div>
       <div className="flex flex-col gap-4">{children}</div>
     </section>
+  )
+}
+
+function SkillSection({
+  title,
+  addLabel,
+  fieldLabel,
+  placeholder,
+  items,
+  onAdd,
+  onChangeTitle,
+  onRemove,
+}: {
+  title: string
+  addLabel: string
+  fieldLabel: string
+  placeholder: string
+  items: SkillRow[]
+  onAdd: () => void
+  onChangeTitle: (key: string, value: string) => void
+  onRemove: (key: string) => void
+}) {
+  return (
+    <FormSection title={title} addLabel={addLabel} onAdd={onAdd}>
+      {items.map((item) => (
+        <div
+          key={item.key}
+          className="grid gap-4 rounded-lg border p-4 lg:grid-cols-[minmax(0,1fr)_auto]"
+        >
+          <Field label={fieldLabel}>
+            <Input
+              value={item.title}
+              onChange={(e) => onChangeTitle(item.key, e.target.value)}
+              placeholder={placeholder}
+            />
+          </Field>
+          <RemoveButton onClick={() => onRemove(item.key)} />
+        </div>
+      ))}
+    </FormSection>
   )
 }
 

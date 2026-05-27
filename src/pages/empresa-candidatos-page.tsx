@@ -12,8 +12,13 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
-import { useUsers } from "@/hooks/api/use-users"
+import {
+  useUserResumeDetail,
+  useUserResumes,
+  useUsers,
+} from "@/hooks/api/use-users"
 import type { UsersFilters } from "@/lib/api/users"
+import type { User } from "@/lib/api/types"
 
 /** Campo de filtro da UI → parâmetro de query da API. */
 const filterFields = [
@@ -154,40 +159,7 @@ export function EmpresaCandidatosPage() {
           <>
             <div className="grid gap-4 xl:grid-cols-2">
               {candidatos.map((candidato) => (
-                <div
-                  key={candidato.id}
-                  className="flex flex-col gap-4 rounded-xl border border-border/80 bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
-                >
-                  <div className="flex items-start gap-4">
-                    <Avatar size="lg">
-                      <AvatarFallback className="bg-primary text-primary-foreground">
-                        {getInitials(candidato.name)}
-                      </AvatarFallback>
-                    </Avatar>
-
-                    <div className="flex min-w-0 flex-col gap-1">
-                      <p className="text-base font-medium text-foreground">
-                        {candidato.name}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {candidato.email}
-                      </p>
-                      {candidato.city ? (
-                        <p className="text-sm text-muted-foreground">
-                          {candidato.city}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end">
-                    <Button asChild variant="outline">
-                      <NavLink to={`/home/empresas/candidatos/${candidato.id}`}>
-                        Visualizar currículo
-                      </NavLink>
-                    </Button>
-                  </div>
-                </div>
+                <CandidatoCard key={candidato.id} candidato={candidato} />
               ))}
             </div>
 
@@ -233,6 +205,92 @@ export function EmpresaCandidatosPage() {
           </div>
         )}
       </section>
+    </div>
+  )
+}
+
+function SkillTags({
+  titulo,
+  skills,
+  badgeClassName,
+}: {
+  titulo: string
+  skills: { id: string; title: string }[]
+  badgeClassName: string
+}) {
+  if (skills.length === 0) return null
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {titulo}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {skills.slice(0, 4).map((skill) => (
+          <span key={skill.id} className={badgeClassName}>
+            {skill.title}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function CandidatoCard({ candidato }: { candidato: User }) {
+  // Descrição e skills vêm do currículo público do egresso (o objeto User não
+  // tem esses dados): a lista dá a descrição e o id do 1º currículo; o detalhe
+  // desse currículo traz hardSkills/softSkills.
+  const resumesQuery = useUserResumes(candidato.id)
+  const primeiro = resumesQuery.data?.data?.[0]
+  const resumeQuery = useUserResumeDetail(candidato.id, primeiro?.id)
+
+  const descricao = primeiro?.coverLetter ?? null
+  const hardSkills = resumeQuery.data?.hardSkills ?? []
+  const softSkills = resumeQuery.data?.softSkills ?? []
+
+  return (
+    <div className="flex flex-col gap-4 rounded-xl border border-border/80 bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
+      <div className="flex items-start gap-4">
+        <Avatar size="lg">
+          <AvatarFallback className="bg-primary text-primary-foreground">
+            {getInitials(candidato.name)}
+          </AvatarFallback>
+        </Avatar>
+
+        <div className="flex min-w-0 flex-col gap-1">
+          <p className="text-base font-medium text-foreground">{candidato.name}</p>
+          <p className="text-sm text-muted-foreground">{candidato.email}</p>
+          {candidato.city ? (
+            <p className="text-sm text-muted-foreground">{candidato.city}</p>
+          ) : null}
+        </div>
+      </div>
+
+      {descricao ? (
+        <p className="text-sm leading-6 text-muted-foreground">{descricao}</p>
+      ) : null}
+
+      {hardSkills.length > 0 || softSkills.length > 0 ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <SkillTags
+            titulo="Hard skills"
+            skills={hardSkills}
+            badgeClassName="rounded-md border border-primary/20 bg-accent/60 px-2 py-1 text-xs font-medium text-accent-foreground"
+          />
+          <SkillTags
+            titulo="Soft skills"
+            skills={softSkills}
+            badgeClassName="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground"
+          />
+        </div>
+      ) : null}
+
+      <div className="flex justify-end">
+        <Button asChild variant="outline">
+          <NavLink to={`/home/interno/candidatos/${candidato.id}`}>
+            Visualizar currículo
+          </NavLink>
+        </Button>
+      </div>
     </div>
   )
 }
