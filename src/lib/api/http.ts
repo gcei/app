@@ -9,7 +9,7 @@
  */
 
 import { API_BASE_URL } from "@/config/env"
-import { messageForErrorCode } from "./error-messages"
+import { messageForErrorCode, messageForValidationCode } from "./error-messages"
 import type { ApiErrorBody } from "./types"
 
 /** Erro lançado quando a API responde com status fora da faixa 2xx. */
@@ -98,8 +98,9 @@ function buildInit(options: RequestOptions): RequestInit {
 function messageFromBody(body: unknown, fallback: string): string {
   if (body && typeof body === "object" && "message" in body) {
     const { message } = body as ApiErrorBody
-    // Validação (class-validator): array de mensagens.
-    if (Array.isArray(message)) return message.join(", ")
+    // Validação (class-validator): array de codes `validation/{regra}/{prop}` →
+    // traduz cada um para pt-BR e junta as mensagens amigáveis.
+    if (Array.isArray(message)) return message.map(messageForValidationCode).join(", ")
     // Domínio: `message` é um code do error-mapping → traduz para pt-BR; se não
     // for um code conhecido, usa o próprio texto.
     if (typeof message === "string") return messageForErrorCode(message, message)

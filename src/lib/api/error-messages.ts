@@ -44,3 +44,156 @@ export function messageForErrorCode(code: unknown, fallback: string): string {
   }
   return fallback
 }
+
+/**
+ * Mensagens dos erros de VALIDAÇÃO (class-validator). O backend manda, em 400 de
+ * validação, o campo `message` como um array de CÓDIGOS no formato
+ * `validation/{regra}/{propriedade}` (ex.: `"validation/is-date-string/closesAt"`).
+ *
+ * As chaves específicas (com propriedade) já são mensagens prontas; as genéricas
+ * (só `validation/{regra}`) usam o placeholder `{property}` (interpolado com um
+ * rótulo amigável) e, em algumas regras, `{constraint1}`/`{constraint2}` — que o
+ * payload atual NÃO carrega (ver tratamento em `messageForValidationCode`).
+ */
+export const validationErrorMessages = {
+  "validation/is-not-empty": "{property} é obrigatório.",
+  "validation/is-not-empty/name": "Nome é obrigatório.",
+  "validation/is-not-empty/email": "E-mail é obrigatório.",
+  "validation/is-not-empty/password": "Senha é obrigatória.",
+  "validation/is-not-empty/role": "Cargo é obrigatório.",
+  "validation/is-not-empty/company": "Empresa é obrigatória.",
+  "validation/is-not-empty/title": "Título é obrigatório.",
+  "validation/is-not-empty/level": "Nível é obrigatório.",
+  "validation/is-not-empty/from": "Data de início é obrigatória.",
+  "validation/is-not-empty/until": "Data de término é obrigatória.",
+  "validation/is-not-empty/closesAt": "Data de encerramento é obrigatória.",
+  "validation/is-not-empty/questionId": "Pergunta é obrigatória.",
+  "validation/is-not-empty/optionId": "Opção é obrigatória.",
+  "validation/is-email": "{property} deve ser um e-mail válido.",
+  "validation/is-email/email": "E-mail inválido.",
+  "validation/is-string": "{property} deve ser um texto.",
+  "validation/is-boolean": "{property} deve ser verdadeiro ou falso.",
+  "validation/is-number": "{property} deve ser um número.",
+  "validation/is-enum": "{property} possui um valor inválido.",
+  "validation/is-enum/role":
+    "Perfil inválido. Valores aceitos: STUDENT, ADMIN.",
+  "validation/is-strong-password":
+    "{property} deve conter letras maiúsculas, minúsculas, números e caracteres especiais.",
+  "validation/is-strong-password/password":
+    "Senha fraca. Deve conter letras maiúsculas, minúsculas, números e caracteres especiais.",
+  "validation/is-date-string": "{property} deve ser uma data válida.",
+  "validation/is-array": "{property} deve ser uma lista.",
+  "validation/array-min-size":
+    "{property} deve ter no mínimo {constraint1} item(ns).",
+  "validation/array-min-size/options":
+    "Opções deve ter no mínimo {constraint1} itens.",
+  "validation/array-min-size/questions":
+    "Perguntas deve ter no mínimo {constraint1} item(ns).",
+  "validation/array-min-size/answers":
+    "Respostas deve ter no mínimo {constraint1} item(ns).",
+  "validation/min": "{property} não pode ser menor que {constraint1}.",
+  "validation/min/page": "Página deve ser no mínimo {constraint1}.",
+  "validation/min/size": "Tamanho deve ser no mínimo {constraint1}.",
+  "validation/length":
+    "{property} deve ter entre {constraint1} e {constraint2} caracteres.",
+  "validation/length/name":
+    "Nome deve ter entre {constraint1} e {constraint2} caracteres.",
+  "validation/length/password":
+    "Senha deve ter entre {constraint1} e {constraint2} caracteres.",
+  "validation/length/role":
+    "Cargo deve ter entre {constraint1} e {constraint2} caracteres.",
+  "validation/length/company":
+    "Empresa deve ter entre {constraint1} e {constraint2} caracteres.",
+  "validation/length/title":
+    "Título deve ter entre {constraint1} e {constraint2} caracteres.",
+  "validation/length/level":
+    "Nível deve ter entre {constraint1} e {constraint2} caracteres.",
+  "validation/length/coverLetter":
+    "Carta de apresentação deve ter no máximo {constraint2} caracteres.",
+  "validation/validate-nested": "{property} possui dados inválidos.",
+} as const
+
+export type ValidationErrorCode = keyof typeof validationErrorMessages
+
+/**
+ * Rótulos amigáveis (pt-BR) por propriedade, usados para interpolar `{property}`
+ * nas mensagens genéricas. Derivados dos campos do domínio (ver `types.ts`).
+ */
+const propertyLabels: Record<string, string> = {
+  name: "Nome",
+  email: "E-mail",
+  password: "Senha",
+  role: "Cargo",
+  company: "Empresa",
+  title: "Título",
+  level: "Nível",
+  from: "Data de início",
+  until: "Data de término",
+  closesAt: "Data de encerramento",
+  opensAt: "Data de abertura",
+  questionId: "Pergunta",
+  optionId: "Opção",
+  options: "Opções",
+  questions: "Perguntas",
+  answers: "Respostas",
+  coverLetter: "Carta de apresentação",
+  page: "Página",
+  size: "Tamanho",
+  city: "Cidade",
+  phoneNumber: "Telefone",
+}
+
+/**
+ * Mensagens genéricas de degradação por REGRA, usadas quando a mensagem do mapa
+ * ainda contém `{constraint...}` não resolvido — o payload de validação atual
+ * (`["validation/{regra}/{propriedade}"]`) NÃO traz os valores numéricos das
+ * constraints, então preferimos um texto legível a expor `{constraint1}` ao
+ * usuário. Se quisermos os números exatos, o backend precisa incluí-los no payload.
+ */
+const constraintFallbackByRule: Record<string, string> = {
+  length: "{property} tem tamanho inválido.",
+  min: "{property} é menor que o mínimo permitido.",
+  "array-min-size": "{property} não tem itens suficientes.",
+}
+
+/**
+ * Traduz UM código de validação (`validation/{regra}/{propriedade}`) para uma
+ * mensagem amigável em pt-BR. Estratégia:
+ * 1. Lookup EXATO do código completo no mapa (chaves com propriedade já são
+ *    mensagens prontas).
+ * 2. Fallback GENÉRICO: remove o último segmento (`/{propriedade}`) para achar a
+ *    chave da regra e interpola `{property}` com o rótulo amigável.
+ * 3. Se nada casar, devolve o próprio código (não esconde o erro).
+ */
+export function messageForValidationCode(code: string): string {
+  // O código vem sempre como `validation/{regra}/{propriedade}`: o último
+  // segmento é a propriedade; o restante (`validation/{regra}`) é a chave da regra.
+  const lastSlash = code.lastIndexOf("/")
+  const property = lastSlash > 0 ? code.slice(lastSlash + 1) : ""
+  const ruleKey = lastSlash > 0 ? code.slice(0, lastSlash) : code
+  const label = propertyLabels[property] ?? property
+
+  // Seleciona a mensagem: 1) lookup EXATO do código completo (chaves com
+  // propriedade já são mensagens prontas); 2) fallback GENÉRICO pela regra.
+  let message: string | undefined
+  if (code in validationErrorMessages) {
+    message = validationErrorMessages[code as ValidationErrorCode]
+  } else if (ruleKey in validationErrorMessages) {
+    message = validationErrorMessages[ruleKey as ValidationErrorCode]
+  }
+
+  // 3. Código desconhecido: devolve como veio (não esconde o erro).
+  if (message === undefined) return code
+
+  message = message.replaceAll("{property}", label)
+
+  // Degradação limpa: o payload não traz os valores de `{constraint...}`. Vale
+  // tanto para a mensagem exata quanto para a genérica — nunca expor
+  // "{constraint1}" ao usuário; cai no texto genérico da regra.
+  if (message.includes("{constraint")) {
+    const rule = ruleKey.slice(ruleKey.lastIndexOf("/") + 1)
+    const fallback = constraintFallbackByRule[rule]
+    if (fallback) return fallback.replaceAll("{property}", label)
+  }
+  return message
+}
