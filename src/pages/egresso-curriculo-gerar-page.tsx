@@ -35,6 +35,7 @@ import {
 } from "@/hooks/api/use-skills"
 import { apiErrorMessage } from "@/lib/api/http"
 import type { Resume, Skill } from "@/lib/api/types"
+import { todayDateInput } from "@/lib/utils"
 
 interface ExperienceRow {
   key: string
@@ -108,6 +109,9 @@ const emptyForm = (hardSkills: Skill[], softSkills: Skill[]): ResumeFormState =>
   softSkills: softSkills.map(skillToRow),
   courses: [],
 })
+
+/** Data mínima aceita para datas de currículo (sem anos absurdos, ex.: 0111). */
+const MIN_RESUME_DATE = "1900-01-01"
 
 /** ISO → valor do `<input type="date">` (YYYY-MM-DD). */
 const isoToDateInput = (iso: string) => (iso ? iso.slice(0, 10) : "")
@@ -249,6 +253,9 @@ function ResumeFormScreen({
   const [error, setError] = useState<string | null>(null)
   const isEditMode = mode === "edit"
   const isSaving = save.isPending || saveSkills.isPending
+  // Limite superior das datas de currículo: experiências/formações não podem
+  // estar no futuro.
+  const today = todayDateInput()
 
   const addSkill = (kind: SkillKind) =>
     setForm((f) => ({ ...f, [kind]: [...f[kind], emptySkill()] }))
@@ -264,6 +271,38 @@ function ResumeFormScreen({
     if (!form.title.trim()) {
       setError("Informe um título para o currículo.")
       return
+    }
+
+    const today = todayDateInput()
+    // Valida as datas. Só checamos linhas com ambas as datas preenchidas (as
+    // demais são descartadas no payload abaixo).
+    const experienceRows = form.experiences.filter((e) => e.from && e.until)
+    const courseRows = form.courses.filter((c) => c.from && c.until)
+    // Início (experiências e formações): entre 1900 e hoje.
+    for (const row of [...experienceRows, ...courseRows]) {
+      if (row.from < MIN_RESUME_DATE || row.from > today) {
+        setError("A data de início deve estar entre 01/01/1900 e hoje.")
+        return
+      }
+    }
+    // Fim das experiências: ≥ início e ≤ hoje (não pode estar no futuro).
+    for (const row of experienceRows) {
+      if (row.until < row.from || row.until > today) {
+        setError(
+          "A data de término não pode ser anterior à data de início nem posterior a hoje.",
+        )
+        return
+      }
+    }
+    // Fim das formações: término no futuro é permitido (curso em andamento); só
+    // não pode ser anterior ao início.
+    for (const row of courseRows) {
+      if (row.until < row.from) {
+        setError(
+          "A data de término da formação não pode ser anterior à data de início.",
+        )
+        return
+      }
     }
 
     const payload: ResumeFormPayload = {
@@ -450,6 +489,8 @@ function ResumeFormScreen({
                     <Input
                       type="date"
                       value={item.from}
+                      min={MIN_RESUME_DATE}
+                      max={today}
                       onChange={(e) =>
                         setForm((f) => ({
                           ...f,
@@ -464,6 +505,8 @@ function ResumeFormScreen({
                     <Input
                       type="date"
                       value={item.until}
+                      min={item.from || MIN_RESUME_DATE}
+                      max={today}
                       onChange={(e) =>
                         setForm((f) => ({
                           ...f,
@@ -595,6 +638,8 @@ function ResumeFormScreen({
                     <Input
                       type="date"
                       value={item.from}
+                      min={MIN_RESUME_DATE}
+                      max={today}
                       onChange={(e) =>
                         setForm((f) => ({
                           ...f,
@@ -609,6 +654,7 @@ function ResumeFormScreen({
                     <Input
                       type="date"
                       value={item.until}
+                      min={item.from || MIN_RESUME_DATE}
                       onChange={(e) =>
                         setForm((f) => ({
                           ...f,

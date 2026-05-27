@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input"
 import { useCreateForm, useForm, useUpdateForm } from "@/hooks/api/use-forms"
 import { apiErrorMessage } from "@/lib/api/http"
 import type { CreateFormPayload, Form } from "@/lib/api/types"
+import { todayDateInput } from "@/lib/utils"
 
 interface OptionRow {
   key: string
@@ -124,6 +125,17 @@ function FormEditorScreen({ mode, initial, formId }: FormEditorScreenProps) {
   const isEdit = mode === "edit"
   const isPending = createForm.isPending || updateForm.isPending
 
+  const today = todayDateInput()
+  // Data de abertura: de hoje pra frente. Mas, na EDIÇÃO de um formulário que
+  // já abriu, o `opensAt` original pode estar no passado — nesse caso usamos o
+  // menor entre hoje e o valor original como mínimo, para não impedir salvar
+  // um formulário já aberto. Datas novas/alteradas continuam limitadas a ≥ hoje.
+  const originalOpensAt = isEdit ? initial.opensAt : ""
+  const opensMin =
+    originalOpensAt && originalOpensAt < today ? originalOpensAt : today
+  // Encerramento: no mínimo o início (max(opensMin, opensAt atual)).
+  const closesMin = state.opensAt && state.opensAt > opensMin ? state.opensAt : opensMin
+
   const updateQuestion = (key: string, patch: Partial<QuestionRow>) =>
     setState((s) => ({
       ...s,
@@ -157,8 +169,13 @@ function FormEditorScreen({ mode, initial, formId }: FormEditorScreenProps) {
       setError("Informe a data de abertura.")
       return
     }
+    // `opensMin` já considera o caso de edição de formulário aberto (passado).
+    if (state.opensAt < opensMin) {
+      setError("A data de início do formulário deve ser hoje ou posterior.")
+      return
+    }
     if (state.closesAt && state.closesAt < state.opensAt) {
-      setError("A data de fechamento não pode ser anterior à de abertura.")
+      setError("A data de encerramento não pode ser anterior à data de início.")
       return
     }
 
@@ -245,6 +262,7 @@ function FormEditorScreen({ mode, initial, formId }: FormEditorScreenProps) {
                 id="form-opens"
                 type="date"
                 value={state.opensAt}
+                min={opensMin}
                 onChange={(e) =>
                   setState((s) => ({ ...s, opensAt: e.target.value }))
                 }
@@ -253,13 +271,13 @@ function FormEditorScreen({ mode, initial, formId }: FormEditorScreenProps) {
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="form-closes" className="text-sm font-medium">
-                Fecha em (opcional)
+                Fecha em
               </label>
               <Input
                 id="form-closes"
                 type="date"
                 value={state.closesAt}
-                min={state.opensAt || undefined}
+                min={closesMin}
                 onChange={(e) =>
                   setState((s) => ({ ...s, closesAt: e.target.value }))
                 }

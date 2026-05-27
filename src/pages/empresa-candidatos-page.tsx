@@ -19,7 +19,7 @@ import {
   useUsers,
 } from "@/hooks/api/use-users"
 import type { UsersFilters } from "@/lib/api/users"
-import type { User } from "@/lib/api/types"
+import type { Course, User } from "@/lib/api/types"
 
 /** Campo de filtro da UI → parâmetro de query da API. */
 const filterFields = [
@@ -35,6 +35,16 @@ const filterFields = [
 type FilterKey = (typeof filterFields)[number]["key"]
 
 const PAGE_SIZE = 8
+
+/** Período de uma formação no formato MM/AAAA – MM/AAAA (mesmo do detalhe). */
+function formatPeriod(from: string, until: string) {
+  const fmt = (iso: string) =>
+    new Date(iso).toLocaleDateString("pt-BR", {
+      month: "2-digit",
+      year: "numeric",
+    })
+  return `${fmt(from)} – ${fmt(until)}`
+}
 
 function getInitials(nome: string) {
   return nome
@@ -290,6 +300,29 @@ function SkillTags({
   )
 }
 
+function FormacaoList({ courses }: { courses: Course[] }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Formação
+      </p>
+      <div className="flex flex-col gap-2">
+        {courses.map((course) => (
+          <div
+            key={course.id}
+            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm"
+          >
+            <span className="text-foreground">{course.title}</span>
+            <span className="text-muted-foreground">
+              {formatPeriod(course.from, course.until)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function CandidatoCard({ candidato }: { candidato: User }) {
   // Descrição e skills vêm do currículo público do egresso (o objeto User não
   // tem esses dados): a lista dá a descrição e o id do 1º currículo; o detalhe
@@ -301,6 +334,7 @@ function CandidatoCard({ candidato }: { candidato: User }) {
   const descricao = primeiro?.coverLetter ?? null
   const hardSkills = resumeQuery.data?.hardSkills ?? []
   const softSkills = resumeQuery.data?.softSkills ?? []
+  const courses = resumeQuery.data?.courses ?? []
 
   return (
     <div className="flex h-full flex-col gap-4 rounded-xl border border-border/80 bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
@@ -338,6 +372,8 @@ function CandidatoCard({ candidato }: { candidato: User }) {
           />
         </div>
       ) : null}
+
+      {courses.length > 0 ? <FormacaoList courses={courses} /> : null}
 
       <div className="mt-auto flex justify-end">
         <Button asChild variant="outline">
