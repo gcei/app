@@ -49,11 +49,11 @@ export function LoginPage() {
     }
   }
 
-  const handleForgotPassword = () => {
-    // Simular envio de email com instruções (reset de senha ainda não
-    // implementado no backend — POST /auth/reset-password responde 501).
-    alert("Instruções enviadas para o seu e-mail cadastrado!")
-  }
+  // const handleForgotPassword = () => {
+  //   // Simular envio de email com instruções (reset de senha ainda não
+  //   // implementado no backend — POST /auth/reset-password responde 501).
+  //   alert("Instruções enviadas para o seu e-mail cadastrado!")
+  // }
 
   return (
     <main className="flex min-h-svh flex-col justify-center gap-8 bg-background px-6 py-6">
@@ -119,7 +119,7 @@ export function LoginPage() {
                   disabled={submitting}
                   required
                 />
-                <div className="flex justify-end">
+                {/* <div className="flex justify-end">
                   <Button
                     type="button"
                     variant="link"
@@ -127,7 +127,7 @@ export function LoginPage() {
                   >
                     Esqueci minha senha
                   </Button>
-                </div>
+                </div> */}
               </div>
 
               {error ? (
