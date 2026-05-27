@@ -1,6 +1,11 @@
 /**
  * Serviço de currículos (`/me/resumes`) e seus recursos aninhados
- * (experiences, languages, abilities, courses).
+ * (experiences, languages, courses).
+ *
+ * Obs.: `abilities` (aninhadas no currículo) deixaram de ser editadas pelo front
+ * — o editor passou a usar hard/soft skills do usuário (`/me/hardskills`,
+ * `/me/softskills`, ver `skills.ts`). A API ainda devolve `resume.abilities` na
+ * resposta (consumido pela visão de candidato da empresa).
  *
  * Observações da API:
  * - `GET /me/resumes` é paginado (`{ data, page, size, total }`).
@@ -12,10 +17,8 @@
 
 import { api } from "./http"
 import type {
-  Ability,
   ApiEnvelope,
   Course,
-  CreateAbilityPayload,
   CreateCoursePayload,
   CreateExperiencePayload,
   CreateLanguagePayload,
@@ -25,7 +28,6 @@ import type {
   Paginated,
   Resume,
   ResumeListItem,
-  UpdateAbilityPayload,
   UpdateCoursePayload,
   UpdateExperiencePayload,
   UpdateLanguagePayload,
@@ -135,35 +137,6 @@ export async function updateLanguage(
 
 export async function deleteLanguage(resumeId: string, id: string): Promise<void> {
   await api.del<void>(`/me/resumes/${resumeId}/languages/${id}`)
-}
-
-// --- Abilities ---
-
-export async function addAbility(
-  resumeId: string,
-  payload: CreateAbilityPayload,
-): Promise<Ability> {
-  const res = await api.post<ApiEnvelope<Ability>>(
-    `/me/resumes/${resumeId}/abilities`,
-    payload,
-  )
-  return res.data
-}
-
-export async function updateAbility(
-  resumeId: string,
-  id: string,
-  payload: UpdateAbilityPayload,
-): Promise<Ability> {
-  const res = await api.patch<ApiEnvelope<Ability>>(
-    `/me/resumes/${resumeId}/abilities/${id}`,
-    payload,
-  )
-  return res.data
-}
-
-export async function deleteAbility(resumeId: string, id: string): Promise<void> {
-  await api.del<void>(`/me/resumes/${resumeId}/abilities/${id}`)
 }
 
 // --- Courses ---

@@ -9,19 +9,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import {
-  addAbility,
   addCourse,
   addExperience,
   addLanguage,
   createResume,
-  deleteAbility,
   deleteCourse,
   deleteExperience,
   deleteLanguage,
   deleteResume,
   getResume,
   listResumes,
-  updateAbility,
   updateCourse,
   updateExperience,
   updateLanguage,
@@ -40,7 +37,6 @@ export interface ResumeFormItems {
     until: string
   }>
   languages: Array<{ id?: string; title: string; level: string }>
-  abilities: Array<{ id?: string; title: string }>
   courses: Array<{ id?: string; title: string; from: string; until: string }>
 }
 
@@ -118,15 +114,6 @@ async function syncNested(
       .filter((o) => !keptIds(payload.languages).has(o.id))
       .map((o) => deleteLanguage(resumeId, o.id)),
 
-    ...payload.abilities.map((a) =>
-      a.id
-        ? updateAbility(resumeId, a.id, { title: a.title })
-        : addAbility(resumeId, { title: a.title }),
-    ),
-    ...original.abilities
-      .filter((o) => !keptIds(payload.abilities).has(o.id))
-      .map((o) => deleteAbility(resumeId, o.id)),
-
     ...payload.courses.map((c) =>
       c.id
         ? updateCourse(resumeId, c.id, {
@@ -161,7 +148,6 @@ export function useSaveResume() {
             title: l.title,
             level: l.level,
           })),
-          abilities: input.payload.abilities.map((a) => ({ title: a.title })),
           courses: input.payload.courses.map((c) => ({
             title: c.title,
             from: c.from,
