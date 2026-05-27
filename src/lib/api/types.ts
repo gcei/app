@@ -66,6 +66,8 @@ export interface RegisterPayload {
   password: string
   role: UserRole
   city?: string
+  phoneNumber?: string
+  available?: boolean
 }
 
 /** Payload de `POST /auth/reset-password` (`ResetPasswordDto`). */
@@ -90,6 +92,20 @@ export interface UpdateUserPayload {
   available?: boolean
   city?: string
   phoneNumber?: string
+}
+
+/**
+ * Payload de `POST /users` (`CreateUserDto`). name/email/password/role são
+ * obrigatórios; city/phoneNumber/available são opcionais.
+ */
+export interface CreateUserPayload {
+  name: string
+  email: string
+  password: string
+  role: UserRole
+  city?: string
+  phoneNumber?: string
+  available?: boolean
 }
 
 // ---------------------------------------------------------------------------

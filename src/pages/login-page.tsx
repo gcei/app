@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { PasswordInput } from "@/components/ui/password-input"
 import { useAuth } from "@/contexts/AuthContext"
 import { ApiError } from "@/lib/api/http"
 
@@ -107,10 +108,9 @@ export function LoginPage() {
                 >
                   Senha
                 </label>
-                <Input
+                <PasswordInput
                   id="password"
                   name="password"
-                  type="password"
                   autoComplete="current-password"
                   spellCheck={false}
                   placeholder="Digite sua senha"
@@ -139,7 +139,17 @@ export function LoginPage() {
                 </p>
               ) : null}
 
-              <Button type="submit" className="mt-1 w-full" disabled={submitting}>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-1 w-full"
+                onClick={() => navigate("/cadastro")}
+                disabled={submitting}
+              >
+                Criar conta
+              </Button>
+
+              <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting ? "Entrando…" : "Entrar"}
               </Button>
             </form>

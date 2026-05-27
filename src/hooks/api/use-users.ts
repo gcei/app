@@ -6,6 +6,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import {
+  createUser,
+  deleteUser,
   getUser,
   getUserResume,
   listUserResumes,
@@ -13,7 +15,7 @@ import {
   updateUser,
   type UsersFilters,
 } from "@/lib/api/users"
-import type { UpdateUserPayload } from "@/lib/api/types"
+import type { CreateUserPayload, UpdateUserPayload } from "@/lib/api/types"
 import { queryKeys } from "@/lib/query/keys"
 
 /** Lista paginada de usuários com filtros (server-side). */
@@ -46,6 +48,26 @@ export function useUpdateUser() {
       queryClient.invalidateQueries({ queryKey: queryKeys.me.detail() })
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
     },
+  })
+}
+
+/** Cria um usuário (`POST /users`, admin-only). Invalida a lista de usuários. */
+export function useCreateUser() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: CreateUserPayload) => createUser(payload),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all }),
+  })
+}
+
+/** Remove um usuário (`DELETE /users/{id}`, admin-only). */
+export function useDeleteUser() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => deleteUser(id),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all }),
   })
 }
 

@@ -11,6 +11,7 @@
 import { api } from "./http"
 import type {
   ApiEnvelope,
+  CreateUserPayload,
   Paginated,
   Resume,
   ResumeListItem,
@@ -60,6 +61,17 @@ export async function updateUser(
 ): Promise<User> {
   const res = await api.patch<ApiEnvelope<User>>(`/users/${id}`, payload)
   return res.data
+}
+
+/** `POST /users` — cria um usuário (admin-only). */
+export async function createUser(payload: CreateUserPayload): Promise<User> {
+  const res = await api.post<ApiEnvelope<User>>("/users", payload)
+  return res.data
+}
+
+/** `DELETE /users/{id}` — remove um usuário (admin-only; responde 204). */
+export async function deleteUser(id: string): Promise<void> {
+  await api.del<void>(`/users/${id}`)
 }
 
 /** `GET /users/{userId}/resumes` — currículos públicos do usuário. */
