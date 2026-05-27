@@ -589,7 +589,7 @@ function ResumeFormScreen({
             <SkillSection
               title="Hard Skills"
               addLabel="Adicionar hard skill"
-              fieldLabel="Hard skill"
+              fieldLabel="Habilidade"
               placeholder="Ex.: React, TypeScript, SQL…"
               items={form.hardSkills}
               onAdd={() => addSkill("hardSkills")}
@@ -600,7 +600,7 @@ function ResumeFormScreen({
             <SkillSection
               title="Soft Skills"
               addLabel="Adicionar soft skill"
-              fieldLabel="Soft skill"
+              fieldLabel="Habilidade"
               placeholder="Ex.: Comunicação, Liderança, Trabalho em equipe…"
               items={form.softSkills}
               onAdd={() => addSkill("softSkills")}
