@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { PasswordInput } from "@/components/ui/password-input"
 import { useAuth } from "@/contexts/AuthContext"
 import { useUpdateUser } from "@/hooks/api/use-users"
 import { apiErrorMessage } from "@/lib/api/http"
@@ -38,9 +39,12 @@ export function EgressoConfiguracoesPage() {
       {isLoading || !user ? (
         <p className="text-sm text-muted-foreground">Carregando perfil…</p>
       ) : (
-        // Remonta o form quando o usuário carrega, inicializando o estado a
+        // Remonta os forms quando o usuário carrega, inicializando o estado a
         // partir dos dados (evita set-state em effect).
-        <PerfilForm key={user.id} user={user} />
+        <>
+          <PerfilForm key={user.id} user={user} />
+          <SenhaForm key={`${user.id}-senha`} user={user} />
+        </>
       )}
     </div>
   )
@@ -198,6 +202,114 @@ function PerfilForm({ user }: { user: User }) {
         </p>
         <Button type="submit" form="perfil-form" disabled={updateUser.isPending}>
           {updateUser.isPending ? "Salvando…" : "Salvar perfil"}
+        </Button>
+      </CardFooter>
+    </Card>
+  )
+}
+
+function SenhaForm({ user }: { user: User }) {
+  const updatePassword = useUpdateUser()
+  const [mensagem, setMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(
+    null,
+  )
+  const [senha, setSenha] = useState({ novaSenha: "", confirmarSenha: "" })
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setMensagem(null)
+
+    // Validação client-side mínima; a força da senha é validada no backend.
+    if (senha.novaSenha.length < 6) {
+      setMensagem({
+        tipo: "erro",
+        texto: "A nova senha deve ter ao menos 6 caracteres.",
+      })
+      return
+    }
+    if (senha.novaSenha !== senha.confirmarSenha) {
+      setMensagem({ tipo: "erro", texto: "As senhas não coincidem." })
+      return
+    }
+
+    updatePassword.mutate(
+      { id: user.id, payload: { password: senha.novaSenha } },
+      {
+        onSuccess: () => {
+          setMensagem({ tipo: "ok", texto: "Senha atualizada." })
+          setSenha({ novaSenha: "", confirmarSenha: "" })
+        },
+        onError: (err) =>
+          setMensagem({
+            tipo: "erro",
+            texto: apiErrorMessage(err, "Não foi possível atualizar a senha."),
+          }),
+      },
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Senha</CardTitle>
+        <CardDescription>Atualize a senha de acesso da sua conta.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form id="senha-form" className="flex flex-col gap-4" onSubmit={handleSubmit}>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <label htmlFor="configuracao-nova-senha" className="text-sm font-medium">
+                Nova senha
+              </label>
+              <PasswordInput
+                id="configuracao-nova-senha"
+                name="nova_senha"
+                autoComplete="new-password"
+                value={senha.novaSenha}
+                onChange={(event) => {
+                  setSenha((current) => ({ ...current, novaSenha: event.target.value }))
+                  setMensagem(null)
+                }}
+                placeholder="Digite a nova senha…"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label
+                htmlFor="configuracao-confirmar-senha"
+                className="text-sm font-medium"
+              >
+                Confirmar nova senha
+              </label>
+              <PasswordInput
+                id="configuracao-confirmar-senha"
+                name="confirmar_senha"
+                autoComplete="new-password"
+                value={senha.confirmarSenha}
+                onChange={(event) => {
+                  setSenha((current) => ({
+                    ...current,
+                    confirmarSenha: event.target.value,
+                  }))
+                  setMensagem(null)
+                }}
+                placeholder="Confirme a nova senha…"
+              />
+            </div>
+          </div>
+        </form>
+      </CardContent>
+      <CardFooter className="justify-between gap-3">
+        <p
+          aria-live="polite"
+          className={`whitespace-pre-line text-sm ${
+            mensagem?.tipo === "erro" ? "text-destructive" : "text-muted-foreground"
+          }`}
+        >
+          {mensagem?.texto ?? ""}
+        </p>
+        <Button type="submit" form="senha-form" disabled={updatePassword.isPending}>
+          {updatePassword.isPending ? "Salvando…" : "Atualizar senha"}
         </Button>
       </CardFooter>
     </Card>
