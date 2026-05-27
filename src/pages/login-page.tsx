@@ -28,7 +28,7 @@ export function LoginPage() {
 
       // ADMIN = staff IFAL → área de empresas.
       if (user.role === "ADMIN") {
-        navigate("/home/empresas", { replace: true })
+        navigate("/home/interno", { replace: true })
         return
       }
 
