@@ -10,7 +10,8 @@ import { EgressoCurriculosPage } from "@/pages/egresso-curriculos-page"
 import { EgressoCurriculoGerarPage } from "@/pages/egresso-curriculo-gerar-page"
 import { EgressoConfiguracoesPage } from "@/pages/egresso-configuracoes-page"
 import { EmpresaHomePage } from "@/pages/empresa-home-page"
-import { EmpresaInicioPage } from "@/pages/empresa-inicio-page"
+// Módulo "Início" desativado temporariamente.
+// import { EmpresaInicioPage } from "@/pages/empresa-inicio-page"
 import { EmpresaEgressosCadastradosPage } from "@/pages/empresa-egressos-cadastrados-page"
 import { EmpresaEgressoEditarPage } from "@/pages/empresa-egresso-editar-page"
 import { EmpresaConfiguracoesPage } from "@/pages/empresa-configuracoes-page"
@@ -46,8 +47,10 @@ export function App() {
 
           <Route element={<RequireRole role="ADMIN" />}>
             <Route path="/home/interno" element={<EmpresaHomePage />}>
+              {/* Módulo "Início" desativado temporariamente:
               <Route index element={<Navigate replace to="/home/interno/inicio" />} />
-              <Route path="inicio" element={<EmpresaInicioPage />} />
+              <Route path="inicio" element={<EmpresaInicioPage />} /> */}
+              <Route index element={<Navigate replace to="/home/interno/candidatos" />} />
               <Route path="candidatos" element={<EmpresaCandidatosPage />} />
               <Route
                 path="candidatos/:candidatoId"
