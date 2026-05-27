@@ -75,6 +75,7 @@ export function EmpresaCandidatosPage() {
 
   const apiFilters: UsersFilters = {
     ...filters,
+    role: "STUDENT",
     blocked: includeBlocked || undefined,
     unavailable: includeUnavailable || undefined,
     page: currentPage,
@@ -82,12 +83,16 @@ export function EmpresaCandidatosPage() {
   }
 
   const usersQuery = useUsers(apiFilters)
-  // A API não filtra por papel; candidatos são egressos (STUDENT).
-  const candidatos = (usersQuery.data?.data ?? []).filter(
-    (user) => user.role === "STUDENT",
-  )
+  // Candidatos são egressos (STUDENT); o filtro por papel é server-side (role).
+  const candidatos = usersQuery.data?.data ?? []
   const total = usersQuery.data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  // "Tem próxima/anterior" é decidido pelos valores do SERVIDOR (page 1-indexed +
+  // total), nunca pelo array retornado. Como o filtro por papel (role=STUDENT) é
+  // server-side, o total já reflete só egressos e a paginação fica consistente.
+  // Próximo só existe quando currentPage * PAGE_SIZE < total.
+  const hasPrevPage = currentPage > 1
+  const hasNextPage = currentPage * PAGE_SIZE < total
   const hasActiveFilters =
     Object.values(filters).some((value) => value.length > 0) ||
     includeBlocked ||
@@ -233,7 +238,12 @@ export function EmpresaCandidatosPage() {
                 <PaginationItem>
                   <PaginationPrevious
                     text="Anterior"
-                    href={createPageHref(Math.max(1, currentPage - 1))}
+                    href={hasPrevPage ? createPageHref(currentPage - 1) : undefined}
+                    aria-disabled={!hasPrevPage}
+                    tabIndex={hasPrevPage ? undefined : -1}
+                    className={
+                      hasPrevPage ? undefined : "pointer-events-none opacity-50"
+                    }
                   />
                 </PaginationItem>
 
@@ -253,7 +263,12 @@ export function EmpresaCandidatosPage() {
                 <PaginationItem>
                   <PaginationNext
                     text="Próximo"
-                    href={createPageHref(Math.min(totalPages, currentPage + 1))}
+                    href={hasNextPage ? createPageHref(currentPage + 1) : undefined}
+                    aria-disabled={!hasNextPage}
+                    tabIndex={hasNextPage ? undefined : -1}
+                    className={
+                      hasNextPage ? undefined : "pointer-events-none opacity-50"
+                    }
                   />
                 </PaginationItem>
               </PaginationContent>

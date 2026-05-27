@@ -4,8 +4,8 @@
  * futuramente, pela área interna (cadastros).
  *
  * `GET /users` aceita filtros server-side (name, email, hardSkill, softSkill,
- * course, city, language, blocked, unavailable) + paginação. Não há filtro por
- * papel; a resposta traz apenas dados básicos do usuário (sem skills/currículo).
+ * course, city, language, role, blocked, unavailable) + paginação. A resposta
+ * traz apenas dados básicos do usuário (sem skills/currículo).
  */
 
 import { api } from "./http"
@@ -17,6 +17,7 @@ import type {
   ResumeListItem,
   UpdateUserPayload,
   User,
+  UserRole,
 } from "./types"
 
 export interface UsersFilters {
@@ -27,6 +28,7 @@ export interface UsersFilters {
   course?: string
   city?: string
   language?: string
+  role?: UserRole
   blocked?: boolean
   unavailable?: boolean
   page?: number

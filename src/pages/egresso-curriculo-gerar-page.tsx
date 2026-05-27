@@ -15,6 +15,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -362,7 +363,7 @@ function ResumeFormScreen({
   }
 
   return (
-    <div className="flex flex-col gap-6 pb-24">
+    <div className="flex flex-col gap-6">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -684,10 +685,8 @@ function ResumeFormScreen({
             ) : null}
           </form>
         </CardContent>
-      </Card>
-
-      <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background p-4">
-        <div className="mx-auto flex max-w-4xl flex-col gap-3 sm:flex-row sm:justify-end">
+        {/* Botões na base do card, alinhados à direita; empilham no mobile */}
+        <CardFooter className="flex flex-col gap-3 sm:flex-row sm:justify-end">
           <Button
             type="button"
             variant="outline"
@@ -703,8 +702,8 @@ function ResumeFormScreen({
                 ? "Atualizar currículo"
                 : "Salvar currículo"}
           </Button>
-        </div>
-      </div>
+        </CardFooter>
+      </Card>
     </div>
   )
 }
