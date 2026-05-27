@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom"
 
 import { ProtectedRoute } from "@/components/protected-route"
 import { RequireSurvey } from "@/components/require-survey"
+import { HomeRedirect, RequireRole } from "@/components/require-role"
 import { EmpresaCandidatosPage } from "@/pages/empresa-candidatos-page"
 import { EmpresaCandidatoCurriculoPage } from "@/pages/empresa-candidato-curriculo-page"
 import { EgressoHomePage } from "@/pages/egresso-home-page"
@@ -27,48 +28,54 @@ export function App() {
       <Route element={<ProtectedRoute />}>
         <Route path="/pesquisa/:slug" element={<PesquisaAnualPage />} />
         <Route element={<RequireSurvey />}>
-          <Route path="/" element={<Navigate replace to="/home/egresso/curriculo" />} />
-          <Route path="/home/egresso" element={<EgressoHomePage />}>
-            <Route index element={<Navigate replace to="curriculo" />} />
-            <Route path="curriculo" element={<EgressoCurriculosPage />} />
-            <Route path="curriculo/gerar" element={<EgressoCurriculoGerarPage />} />
-            <Route
-              path="curriculo/:curriculoId/editar"
-              element={<EgressoCurriculoGerarPage />}
-            />
-            <Route path="sobre" element={<SobrePage />} />
-            <Route path="configuracoes" element={<EgressoConfiguracoesPage />} />
+          <Route path="/" element={<HomeRedirect />} />
+
+          <Route element={<RequireRole role="STUDENT" />}>
+            <Route path="/home/egresso" element={<EgressoHomePage />}>
+              <Route index element={<Navigate replace to="curriculo" />} />
+              <Route path="curriculo" element={<EgressoCurriculosPage />} />
+              <Route path="curriculo/gerar" element={<EgressoCurriculoGerarPage />} />
+              <Route
+                path="curriculo/:curriculoId/editar"
+                element={<EgressoCurriculoGerarPage />}
+              />
+              <Route path="sobre" element={<SobrePage />} />
+              <Route path="configuracoes" element={<EgressoConfiguracoesPage />} />
+            </Route>
           </Route>
-          <Route path="/home/interno" element={<EmpresaHomePage />}>
-            <Route index element={<Navigate replace to="/home/interno/inicio" />} />
-            <Route path="inicio" element={<EmpresaInicioPage />} />
-            <Route path="candidatos" element={<EmpresaCandidatosPage />} />
-            <Route
-              path="candidatos/:candidatoId"
-              element={<EmpresaCandidatoCurriculoPage />}
-            />
-            <Route
-              path="egressos-cadastrados"
-              element={<EmpresaEgressosCadastradosPage />}
-            />
-            <Route
-              path="egressos-cadastrados/:egressoId/editar"
-              element={<EmpresaEgressoEditarPage />}
-            />
-            <Route path="pesquisa-anual" element={<EmpresaPesquisaAnualPage />} />
-            <Route
-              path="pesquisa-anual/novo"
-              element={<EmpresaPesquisaAnualEditarPage />}
-            />
-            <Route
-              path="pesquisa-anual/:formId/editar"
-              element={<EmpresaPesquisaAnualEditarPage />}
-            />
-            <Route
-              path="pesquisa-anual/:formId/respostas"
-              element={<EmpresaPesquisaAnualRespostasPage />}
-            />
-            <Route path="configuracoes" element={<EmpresaConfiguracoesPage />} />
+
+          <Route element={<RequireRole role="ADMIN" />}>
+            <Route path="/home/interno" element={<EmpresaHomePage />}>
+              <Route index element={<Navigate replace to="/home/interno/inicio" />} />
+              <Route path="inicio" element={<EmpresaInicioPage />} />
+              <Route path="candidatos" element={<EmpresaCandidatosPage />} />
+              <Route
+                path="candidatos/:candidatoId"
+                element={<EmpresaCandidatoCurriculoPage />}
+              />
+              <Route
+                path="egressos-cadastrados"
+                element={<EmpresaEgressosCadastradosPage />}
+              />
+              <Route
+                path="egressos-cadastrados/:egressoId/editar"
+                element={<EmpresaEgressoEditarPage />}
+              />
+              <Route path="pesquisa-anual" element={<EmpresaPesquisaAnualPage />} />
+              <Route
+                path="pesquisa-anual/novo"
+                element={<EmpresaPesquisaAnualEditarPage />}
+              />
+              <Route
+                path="pesquisa-anual/:formId/editar"
+                element={<EmpresaPesquisaAnualEditarPage />}
+              />
+              <Route
+                path="pesquisa-anual/:formId/respostas"
+                element={<EmpresaPesquisaAnualRespostasPage />}
+              />
+              <Route path="configuracoes" element={<EmpresaConfiguracoesPage />} />
+            </Route>
           </Route>
         </Route>
       </Route>
