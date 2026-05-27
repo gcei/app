@@ -28,7 +28,7 @@ createRoot(document.getElementById("root")!).render(
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <UserProvider>
-            <ThemeProvider>
+            <ThemeProvider defaultTheme="light">
               <TooltipProvider>
                 <App />
               </TooltipProvider>
