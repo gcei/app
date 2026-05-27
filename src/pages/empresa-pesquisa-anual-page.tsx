@@ -39,10 +39,13 @@ function formatDate(iso: string | null) {
   if (!iso) return "—"
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return "—"
+  // As datas são salvas como meia-noite UTC (dia de calendário). Formatar em
+  // UTC evita o "−1 dia" causado por fusos atrás de UTC (ex.: UTC-3).
   return date.toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
+    timeZone: "UTC",
   })
 }
 

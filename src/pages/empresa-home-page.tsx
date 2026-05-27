@@ -3,7 +3,7 @@ import {
   ArrowLeftIcon,
   ClipboardTextIcon,
   GearIcon,
-  HouseIcon,
+  // HouseIcon, // módulo "Início" desativado temporariamente
   UsersIcon,
   UsersThreeIcon,
 } from "@phosphor-icons/react"
@@ -26,12 +26,13 @@ import {
 import { useAuth } from "@/contexts/AuthContext"
 
 const empresaSections = [
-  {
-    path: "/home/interno/inicio",
-    label: "Início",
-    icon: HouseIcon,
-    end: false,
-  },
+  // Módulo "Início" desativado temporariamente.
+  // {
+  //   path: "/home/interno/inicio",
+  //   label: "Início",
+  //   icon: HouseIcon,
+  //   end: false,
+  // },
   {
     path: "/home/interno/candidatos",
     label: "Candidatos",
