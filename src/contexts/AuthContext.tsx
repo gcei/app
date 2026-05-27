@@ -13,10 +13,10 @@ import type { ReactNode } from "react"
 import { useNavigate } from "react-router-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { login as apiLogin } from "@/lib/api/auth"
+import { login as apiLogin, register as apiRegister } from "@/lib/api/auth"
 import { ApiError, setUnauthorizedHandler } from "@/lib/api/http"
 import { getMe } from "@/lib/api/me"
-import type { LoginPayload, User } from "@/lib/api/types"
+import type { LoginPayload, RegisterPayload, User } from "@/lib/api/types"
 import { queryKeys } from "@/lib/query/keys"
 
 interface AuthContextType {
@@ -24,6 +24,7 @@ interface AuthContextType {
   isAuthenticated: boolean
   isLoading: boolean
   login: (payload: LoginPayload) => Promise<User>
+  register: (payload: RegisterPayload) => Promise<User>
   logout: () => void
 }
 
@@ -64,6 +65,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return user
   }
 
+  // O cadastro já autentica (o backend seta os cookies), então populamos o
+  // usuário no cache, igual ao login.
+  const register = async (payload: RegisterPayload): Promise<User> => {
+    const user = await apiRegister(payload)
+    queryClient.setQueryData(queryKeys.me.detail(), user)
+    return user
+  }
+
   const logout = () => {
     // A API não expõe endpoint de logout e os cookies são HttpOnly (não dá
     // para limpá-los via JS). Logout do lado do cliente: zeramos o usuário e
@@ -79,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: !!user,
     isLoading: meQuery.isLoading,
     login,
+    register,
     logout,
   }
 

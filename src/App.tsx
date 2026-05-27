@@ -15,9 +15,12 @@ import { EmpresaHomePage } from "@/pages/empresa-home-page"
 import { EmpresaEgressosCadastradosPage } from "@/pages/empresa-egressos-cadastrados-page"
 import { EmpresaEgressoEditarPage } from "@/pages/empresa-egresso-editar-page"
 import { EmpresaConfiguracoesPage } from "@/pages/empresa-configuracoes-page"
+import { EmpresaUsuariosPage } from "@/pages/empresa-usuarios-page"
+import { EmpresaUsuarioNovoPage } from "@/pages/empresa-usuario-novo-page"
 import { EmpresaPesquisaAnualPage } from "@/pages/empresa-pesquisa-anual-page"
 import { EmpresaPesquisaAnualEditarPage } from "@/pages/empresa-pesquisa-anual-editar-page"
 import { EmpresaPesquisaAnualRespostasPage } from "@/pages/empresa-pesquisa-anual-respostas-page"
+import { CadastroPage } from "@/pages/cadastro-page"
 import { LoginPage } from "@/pages/login-page"
 import { PesquisaAnualPage } from "@/pages/pesquisa-anual-page"
 import { SobrePage } from "@/pages/sobre-page"
@@ -26,6 +29,7 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/cadastro" element={<CadastroPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/pesquisa/:slug" element={<PesquisaAnualPage />} />
         <Route element={<RequireSurvey />}>
@@ -77,6 +81,8 @@ export function App() {
                 path="pesquisa-anual/:formId/respostas"
                 element={<EmpresaPesquisaAnualRespostasPage />}
               />
+              <Route path="usuarios" element={<EmpresaUsuariosPage />} />
+              <Route path="usuarios/novo" element={<EmpresaUsuarioNovoPage />} />
               <Route path="configuracoes" element={<EmpresaConfiguracoesPage />} />
             </Route>
           </Route>

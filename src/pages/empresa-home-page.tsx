@@ -4,6 +4,7 @@ import {
   ClipboardTextIcon,
   GearIcon,
   // HouseIcon, // módulo "Início" desativado temporariamente
+  UserGearIcon,
   UsersIcon,
   UsersThreeIcon,
 } from "@phosphor-icons/react"
@@ -49,6 +50,12 @@ const empresaSections = [
     path: "/home/interno/pesquisa-anual",
     label: "Pesquisa do egresso",
     icon: ClipboardTextIcon,
+    end: false,
+  },
+  {
+    path: "/home/interno/usuarios",
+    label: "Usuários",
+    icon: UserGearIcon,
     end: false,
   },
   {
