@@ -351,6 +351,21 @@ function CandidatoCard({ candidato }: { candidato: User }) {
           {candidato.city ? (
             <p className="text-sm text-muted-foreground">{candidato.city}</p>
           ) : null}
+          {/* Estados não exclusivos: indisponível e/ou bloqueado podem coexistir. */}
+          {!candidato.available || candidato.blocked ? (
+            <div className="mt-1 flex flex-wrap gap-2">
+              {!candidato.available ? (
+                <span className="rounded-md bg-yellow-400/80 px-2 py-1 text-xs font-medium text-yellow-950">
+                  Indisponível
+                </span>
+              ) : null}
+              {candidato.blocked ? (
+                <span className="rounded-md bg-destructive/80 px-2 py-1 text-xs font-medium text-white">
+                  Bloqueado
+                </span>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
 
