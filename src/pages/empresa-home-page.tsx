@@ -3,7 +3,9 @@ import {
   ArrowLeftIcon,
   ClipboardTextIcon,
   GearIcon,
+  HouseIcon,
   UsersIcon,
+  UsersThreeIcon,
 } from "@phosphor-icons/react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -25,19 +27,31 @@ import { useAuth } from "@/contexts/AuthContext"
 
 const empresaSections = [
   {
-    path: "/home/empresas/candidatos",
+    path: "/home/interno/inicio",
+    label: "Início",
+    icon: HouseIcon,
+    end: false,
+  },
+  {
+    path: "/home/interno/candidatos",
     label: "Candidatos",
     icon: UsersIcon,
     end: false,
   },
   {
-    path: "/home/empresas/pesquisa-anual",
+    path: "/home/interno/egressos-cadastrados",
+    label: "Egressos cadastrados",
+    icon: UsersThreeIcon,
+    end: false,
+  },
+  {
+    path: "/home/interno/pesquisa-anual",
     label: "Pesquisa do egresso",
     icon: ClipboardTextIcon,
     end: false,
   },
   {
-    path: "/home/empresas/configuracoes",
+    path: "/home/interno/configuracoes",
     label: "Configurações",
     icon: GearIcon,
     end: false,

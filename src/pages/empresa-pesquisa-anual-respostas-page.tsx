@@ -71,7 +71,7 @@ export function EmpresaPesquisaAnualRespostasPage() {
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <NavLink to="/home/empresas/pesquisa-anual">Formulários</NavLink>
+              <NavLink to="/home/interno/pesquisa-anual">Formulários</NavLink>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />

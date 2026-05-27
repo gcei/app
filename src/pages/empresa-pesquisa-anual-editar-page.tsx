@@ -183,7 +183,7 @@ function FormEditorScreen({ mode, initial, formId }: FormEditorScreenProps) {
       })),
     }
 
-    const onSuccess = () => navigate("/home/empresas/pesquisa-anual")
+    const onSuccess = () => navigate("/home/interno/pesquisa-anual")
     const onError = () =>
       setError("Não foi possível salvar o formulário. Tente novamente.")
 
@@ -200,7 +200,7 @@ function FormEditorScreen({ mode, initial, formId }: FormEditorScreenProps) {
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <NavLink to="/home/empresas/pesquisa-anual">Formulários</NavLink>
+              <NavLink to="/home/interno/pesquisa-anual">Formulários</NavLink>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
@@ -390,7 +390,7 @@ function FormEditorScreen({ mode, initial, formId }: FormEditorScreenProps) {
           <Button
             type="button"
             variant="outline"
-            onClick={() => navigate("/home/empresas/pesquisa-anual")}
+            onClick={() => navigate("/home/interno/pesquisa-anual")}
             disabled={isPending}
           >
             Cancelar

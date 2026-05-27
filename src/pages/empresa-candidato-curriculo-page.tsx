@@ -64,7 +64,7 @@ export function EmpresaCandidatoCurriculoPage() {
         </CardHeader>
         <CardContent>
           <Button asChild variant="outline">
-            <NavLink to="/home/empresas/candidatos">Voltar para candidatos</NavLink>
+            <NavLink to="/home/interno/candidatos">Voltar para candidatos</NavLink>
           </Button>
         </CardContent>
       </Card>
@@ -87,7 +87,7 @@ export function EmpresaCandidatoCurriculoPage() {
           <BreadcrumbList>
             <BreadcrumbItem>
               <BreadcrumbLink asChild>
-                <NavLink to="/home/empresas/candidatos">Candidatos</NavLink>
+                <NavLink to="/home/interno/candidatos">Candidatos</NavLink>
               </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />

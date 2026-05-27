@@ -99,7 +99,7 @@ export function EmpresaPesquisaAnualPage() {
             egressos.
           </p>
         </div>
-        <Button onClick={() => navigate("/home/empresas/pesquisa-anual/novo")}>
+        <Button onClick={() => navigate("/home/interno/pesquisa-anual/novo")}>
           <PlusIcon aria-hidden="true" />
           Novo formulário
         </Button>
@@ -175,7 +175,7 @@ export function EmpresaPesquisaAnualPage() {
                           title="Ver respostas"
                         >
                           <NavLink
-                            to={`/home/empresas/pesquisa-anual/${form.id}/respostas`}
+                            to={`/home/interno/pesquisa-anual/${form.id}/respostas`}
                             aria-label="Ver respostas"
                           >
                             <ChartBarIcon aria-hidden="true" />
@@ -198,7 +198,7 @@ export function EmpresaPesquisaAnualPage() {
                           title="Editar formulário"
                         >
                           <NavLink
-                            to={`/home/empresas/pesquisa-anual/${form.id}/editar`}
+                            to={`/home/interno/pesquisa-anual/${form.id}/editar`}
                             aria-label="Editar formulário"
                           >
                             <PencilSimpleIcon aria-hidden="true" />
