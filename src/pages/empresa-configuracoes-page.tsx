@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input"
 import { PasswordInput } from "@/components/ui/password-input"
 import { useAuth } from "@/contexts/AuthContext"
 import { useDeleteUser, useUpdateUser } from "@/hooks/api/use-users"
+import { apiErrorMessage } from "@/lib/api/http"
 
 export function EmpresaConfiguracoesPage() {
   const { user, logout } = useAuth()
@@ -56,10 +57,10 @@ export function EmpresaConfiguracoesPage() {
       {
         onSuccess: () =>
           setMensagemPerfil({ tipo: "ok", texto: "Dados do usuário atualizados." }),
-        onError: () =>
+        onError: (err) =>
           setMensagemPerfil({
             tipo: "erro",
-            texto: "Não foi possível atualizar o perfil.",
+            texto: apiErrorMessage(err, "Não foi possível atualizar o perfil."),
           }),
       },
     )
@@ -87,10 +88,10 @@ export function EmpresaConfiguracoesPage() {
           setMensagemSenha({ tipo: "ok", texto: "Senha atualizada." })
           setSenha({ novaSenha: "", confirmarSenha: "" })
         },
-        onError: () =>
+        onError: (err) =>
           setMensagemSenha({
             tipo: "erro",
-            texto: "Não foi possível atualizar a senha.",
+            texto: apiErrorMessage(err, "Não foi possível atualizar a senha."),
           }),
       },
     )
@@ -282,8 +283,10 @@ export function EmpresaConfiguracoesPage() {
                     setErroExcluir(null)
                     deleteAccount.mutate(user.id, {
                       onSuccess: () => logout(),
-                      onError: () =>
-                        setErroExcluir("Não foi possível excluir a conta."),
+                      onError: (err) =>
+                        setErroExcluir(
+                          apiErrorMessage(err, "Não foi possível excluir a conta."),
+                        ),
                     })
                   }}
                 >

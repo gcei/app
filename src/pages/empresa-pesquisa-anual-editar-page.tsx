@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { useCreateForm, useForm, useUpdateForm } from "@/hooks/api/use-forms"
+import { apiErrorMessage } from "@/lib/api/http"
 import type { CreateFormPayload, Form } from "@/lib/api/types"
 
 interface OptionRow {
@@ -184,8 +185,10 @@ function FormEditorScreen({ mode, initial, formId }: FormEditorScreenProps) {
     }
 
     const onSuccess = () => navigate("/home/interno/pesquisa-anual")
-    const onError = () =>
-      setError("Não foi possível salvar o formulário. Tente novamente.")
+    const onError = (err: unknown) =>
+      setError(
+        apiErrorMessage(err, "Não foi possível salvar o formulário. Tente novamente."),
+      )
 
     if (isEdit && formId) {
       updateForm.mutate({ id: formId, payload }, { onSuccess, onError })

@@ -33,6 +33,7 @@ import {
   useSoftSkills,
   type SaveSkillsInput,
 } from "@/hooks/api/use-skills"
+import { apiErrorMessage } from "@/lib/api/http"
 import type { Resume, Skill } from "@/lib/api/types"
 
 interface ExperienceRow {
@@ -314,8 +315,10 @@ function ResumeFormScreen({
         saveSkills.mutateAsync(skillsInput),
       ])
       navigate("/home/egresso/curriculo")
-    } catch {
-      setError("Não foi possível salvar o currículo. Tente novamente.")
+    } catch (err) {
+      setError(
+        apiErrorMessage(err, "Não foi possível salvar o currículo. Tente novamente."),
+      )
     }
   }
 

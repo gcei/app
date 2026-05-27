@@ -32,6 +32,7 @@ import {
   useFormResultsStats,
 } from "@/hooks/api/use-forms"
 import { exportFormResultsCsv } from "@/lib/api/forms"
+import { apiErrorMessage } from "@/lib/api/http"
 import { downloadBlob } from "@/lib/download"
 
 function formatDateTime(iso: string) {
@@ -58,8 +59,8 @@ export function EmpresaPesquisaAnualRespostasPage() {
     try {
       const blob = await exportFormResultsCsv(formId)
       downloadBlob(blob, `${formQuery.data?.title ?? "respostas"}-respostas.csv`)
-    } catch {
-      setError("Não foi possível exportar as respostas.")
+    } catch (err) {
+      setError(apiErrorMessage(err, "Não foi possível exportar as respostas."))
     } finally {
       setExporting(false)
     }

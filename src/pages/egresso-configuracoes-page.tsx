@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/contexts/AuthContext"
 import { useUpdateUser } from "@/hooks/api/use-users"
+import { apiErrorMessage } from "@/lib/api/http"
 
 function getInitials(nome: string) {
   return (
@@ -59,10 +60,13 @@ export function EgressoConfiguracoesPage() {
       {
         onSuccess: () =>
           setMensagem({ tipo: "ok", texto: "Dados do perfil atualizados." }),
-        onError: () =>
+        onError: (err) =>
           setMensagem({
             tipo: "erro",
-            texto: "Não foi possível atualizar o perfil. Tente novamente.",
+            texto: apiErrorMessage(
+              err,
+              "Não foi possível atualizar o perfil. Tente novamente.",
+            ),
           }),
       },
     )

@@ -26,6 +26,11 @@ export interface Paginated<T> {
  */
 export interface ApiErrorBody {
   statusCode: number
+  /**
+   * Em erros de domínio é um *code* do backend (ex.: `"auth/invalid-credentials"`,
+   * traduzido em `error-messages.ts`); em erros de validação (class-validator) é
+   * um array de mensagens.
+   */
   message: string | string[]
   error?: string
 }

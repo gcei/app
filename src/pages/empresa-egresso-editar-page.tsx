@@ -21,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { useUpdateUser, useUserById } from "@/hooks/api/use-users"
+import { apiErrorMessage } from "@/lib/api/http"
 import type { User } from "@/lib/api/types"
 
 const LISTA_PATH = "/home/interno/egressos-cadastrados"
@@ -91,7 +92,8 @@ function EditarEgressoForm({ egresso }: { egresso: User }) {
       },
       {
         onSuccess: () => navigate(LISTA_PATH),
-        onError: () => setErro("Não foi possível salvar as alterações."),
+        onError: (err) =>
+          setErro(apiErrorMessage(err, "Não foi possível salvar as alterações.")),
       },
     )
   }

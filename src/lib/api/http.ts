@@ -9,6 +9,7 @@
  */
 
 import { API_BASE_URL } from "@/config/env"
+import { messageForErrorCode } from "./error-messages"
 import type { ApiErrorBody } from "./types"
 
 /** Erro lançado quando a API responde com status fora da faixa 2xx. */
@@ -22,6 +23,14 @@ export class ApiError extends Error {
     this.status = status
     this.body = body
   }
+}
+
+/**
+ * Mensagem pronta para exibição a partir de um erro qualquer: usa a mensagem já
+ * tratada do `ApiError` (que vem do error-mapping); senão, o `fallback`.
+ */
+export function apiErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof ApiError ? error.message : fallback
 }
 
 /**
@@ -89,8 +98,11 @@ function buildInit(options: RequestOptions): RequestInit {
 function messageFromBody(body: unknown, fallback: string): string {
   if (body && typeof body === "object" && "message" in body) {
     const { message } = body as ApiErrorBody
+    // Validação (class-validator): array de mensagens.
     if (Array.isArray(message)) return message.join(", ")
-    if (typeof message === "string") return message
+    // Domínio: `message` é um code do error-mapping → traduz para pt-BR; se não
+    // for um code conhecido, usa o próprio texto.
+    if (typeof message === "string") return messageForErrorCode(message, message)
   }
   return fallback
 }

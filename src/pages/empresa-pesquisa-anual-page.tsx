@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/table"
 import { useDeleteForm, useForms } from "@/hooks/api/use-forms"
 import { exportFormResultsCsv } from "@/lib/api/forms"
+import { apiErrorMessage } from "@/lib/api/http"
 import type { FormListItem } from "@/lib/api/types"
 import { downloadBlob } from "@/lib/download"
 
@@ -73,8 +74,8 @@ export function EmpresaPesquisaAnualPage() {
     try {
       const blob = await exportFormResultsCsv(form.id)
       downloadBlob(blob, `${form.title}-respostas.csv`)
-    } catch {
-      setActionError("Não foi possível exportar as respostas.")
+    } catch (err) {
+      setActionError(apiErrorMessage(err, "Não foi possível exportar as respostas."))
     } finally {
       setBusyId(null)
     }
@@ -233,7 +234,17 @@ export function EmpresaPesquisaAnualPage() {
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancelar</AlertDialogCancel>
                               <AlertDialogAction
-                                onClick={() => deleteForm.mutate(form.id)}
+                                onClick={() =>
+                                  deleteForm.mutate(form.id, {
+                                    onError: (err) =>
+                                      setActionError(
+                                        apiErrorMessage(
+                                          err,
+                                          "Não foi possível excluir o formulário.",
+                                        ),
+                                      ),
+                                  })
+                                }
                                 className="bg-destructive text-white hover:bg-destructive/90"
                               >
                                 Excluir
