@@ -1,21 +1,18 @@
-# React + TypeScript + Vite + shadcn/ui
+# Integrantes
 
-This is a template for a new Vite project with React, TypeScript, and shadcn/ui.
+- Eike Fabrício
+- João Alencar
+- Matheus Matta
+- Hugo Alexandre
 
-## Adding components
+## Requisitos
 
-To add components to your app, run the following command:
+- NodeJS 22+
 
-```bash
-npx shadcn@latest add button
-```
+## Configuração
 
-This will place the ui components in the `src/components` directory.
+- Configurar URL base da API em um `.env` (seguir `.env.example`)
+- Instalar bibliotecas (`npm i`)
+- Rodar o projeto em modo desenvolvimento (`npm run dev`)
+- Acessar no navegador, em `http://localhost:5173`
 
-## Using components
-
-To use the components in your app, import them as follows:
-
-```tsx
-import { Button } from "@/components/ui/button"
-```
