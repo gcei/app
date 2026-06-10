@@ -2,6 +2,7 @@ import { useState } from "react"
 import { NavLink, useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
+import { BrandLogos } from "@/components/brand-logos"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { PasswordInput } from "@/components/ui/password-input"
@@ -82,11 +83,7 @@ export function CadastroPage() {
     <main className="flex min-h-svh flex-col justify-center gap-8 bg-background px-6 py-10">
       <div className="mx-auto w-full max-w-md">
         <div className="flex flex-col items-center gap-3 text-center">
-          <img
-            src="/logo_ifal.png"
-            alt="Instituto Federal de Alagoas"
-            className="h-20 w-auto"
-          />
+          <BrandLogos ifalClassName="h-20" cinfoClassName="h-20" />
           <div className="flex flex-col">
             <p className="text-sm font-medium text-muted-foreground">GCEI</p>
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">

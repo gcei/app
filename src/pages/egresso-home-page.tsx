@@ -23,6 +23,7 @@ import {
   InfoIcon,
 } from "@phosphor-icons/react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { BrandLogos } from "@/components/brand-logos"
 
 const egressoSections = [
   {
@@ -110,11 +111,7 @@ export function EgressoHomePage() {
       <SidebarInset>
         <header className="flex items-center gap-3 p-6">
           <SidebarTrigger />
-          <img
-            src="/logo_ifal.png"
-            alt="Instituto Federal de Alagoas"
-            className="ml-auto h-14 w-auto"
-          />
+          <BrandLogos className="ml-auto" />
         </header>
 
         <main className="flex flex-1 flex-col gap-6 px-6 pb-6">

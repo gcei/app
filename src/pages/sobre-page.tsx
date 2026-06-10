@@ -1,3 +1,5 @@
+import { BrandLogos } from "@/components/brand-logos"
+
 export function SobrePage() {
     return (
         <div className="flex h-full flex-col justify-between gap-6">
@@ -26,11 +28,7 @@ export function SobrePage() {
                     </div>
                 </div>
             </div>
-            <img
-                src="/logo_ifal.png"
-                alt="Instituto Federal de Alagoas"
-                className="h-24 self-end object-contain pr-4 pb-4"
-            />
+            <BrandLogos className="self-end pr-4 pb-4" ifalClassName="h-24" cinfoClassName="h-24" />
         </div>
     );
 }

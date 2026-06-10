@@ -156,6 +156,11 @@ export function LoginPage() {
           </CardContent>
         </Card>
       </div>
+      <img
+        src="/logo_cinfo.png"
+        alt="Coordenação de Informática"
+        className="fixed bottom-4 right-4 h-16 w-auto object-contain sm:bottom-6 sm:right-6 sm:h-20"
+      />
     </main>
   )
 }
