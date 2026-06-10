@@ -1,8 +1,6 @@
-import { BrandLogos } from "@/components/brand-logos"
-
 export function SobrePage() {
     return (
-        <div className="flex h-full flex-col justify-between gap-6">
+        <div className="flex h-full flex-col gap-6">
             <div className="flex flex-col gap-6">
                 <div className="flex flex-col gap-2">
                     <h1 className="text-2xl font-semibold tracking-tight text-foreground">
@@ -28,7 +26,6 @@ export function SobrePage() {
                     </div>
                 </div>
             </div>
-            <BrandLogos className="self-end pr-4 pb-4" ifalClassName="h-24" cinfoClassName="h-24" />
         </div>
     );
 }
